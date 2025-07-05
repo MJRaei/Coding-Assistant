@@ -1,129 +1,195 @@
+"""
+Updated ChunkProcessor using the new modular chunking system.
+"""
+
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import logging
 
 from ..models import FileMetadata, CodeChunk
 from .file_processor import FileProcessor
 from ..config import DEFAULT_MAX_TOKENS, DEFAULT_OVERLAP_TOKENS
 
+# Import the new chunking system
+from .chunking import ChunkerFactory, ChunkingStrategy
+
 
 class ChunkProcessor:
-    """Handles content chunking strategies"""
+    """
+    Handles content chunking strategies using modular language-specific chunkers.
     
-    def __init__(self, max_tokens: int = None, overlap_tokens: int = None):
+    This is the main interface that uses the new modular chunking system while
+    maintaining backward compatibility with existing code.
+    """
+    
+    def __init__(self, max_tokens: int = None, overlap_tokens: int = None, 
+                 chunking_strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+        """
+        Initialize ChunkProcessor with new modular chunking system
+        
+        Args:
+            max_tokens: Maximum tokens per chunk
+            overlap_tokens: Overlap between chunks  
+            chunking_strategy: Strategy to use for chunking
+        """
         self.max_tokens = max_tokens or DEFAULT_MAX_TOKENS
         self.overlap_tokens = overlap_tokens or DEFAULT_OVERLAP_TOKENS
+        self.chunking_strategy = chunking_strategy
         self.logger = logging.getLogger(__name__)
+        
+        self.logger.info(f"ChunkProcessor initialized with strategy: {chunking_strategy.value}")
     
     def estimate_tokens(self, text: str) -> int:
-        """Rough token estimation (1 token ≈ 4 characters)"""
+        """Rough token estimation (1 token ≈ 4 characters) - kept for backward compatibility"""
         return len(text) // 4
     
-    def chunk_by_functions(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Chunk Python files by function/class boundaries"""
-        chunks = []
-        lines = content.splitlines()
-        
-        boundaries = []
-        for i, line in enumerate(lines):
-            if re.match(r'^(def|class)\s+\w+', line.strip()):
-                boundaries.append(i)
-        
-        boundaries = [0] + boundaries + [len(lines)]
-        
-        for i in range(len(boundaries) - 1):
-            start_line = boundaries[i]
-            end_line = boundaries[i + 1]
-            chunk_content = '\n'.join(lines[start_line:end_line])
-            
-            if chunk_content.strip():
-                chunk_type = 'function' if 'def ' in lines[start_line] else 'class' if 'class ' in lines[start_line] else 'section'
-                
-                chunks.append(CodeChunk(
-                    content=chunk_content,
-                    file_metadata=file_metadata,
-                    chunk_index=i,
-                    chunk_type=chunk_type,
-                    start_line=start_line + 1,
-                    end_line=end_line,
-                    tokens_count=self.estimate_tokens(chunk_content)
-                ))
-        
-        return chunks
-    
-    def chunk_by_size(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Chunk content by token size with overlap"""
-        chunks = []
-        lines = content.splitlines()
-        current_chunk = []
-        current_tokens = 0
-        start_line = 1
-        
-        for i, line in enumerate(lines):
-            line_tokens = self.estimate_tokens(line)
-            
-            if current_tokens + line_tokens > self.max_tokens and current_chunk:
-                chunk_content = '\n'.join(current_chunk)
-                chunks.append(CodeChunk(
-                    content=chunk_content,
-                    file_metadata=file_metadata,
-                    chunk_index=len(chunks),
-                    chunk_type='section',
-                    start_line=start_line,
-                    end_line=i,
-                    tokens_count=current_tokens
-                ))
-                
-                overlap_lines = []
-                overlap_tokens = 0
-                for j in range(len(current_chunk) - 1, -1, -1):
-                    if overlap_tokens + self.estimate_tokens(current_chunk[j]) <= self.overlap_tokens:
-                        overlap_lines.insert(0, current_chunk[j])
-                        overlap_tokens += self.estimate_tokens(current_chunk[j])
-                    else:
-                        break
-                
-                current_chunk = overlap_lines + [line]
-                current_tokens = overlap_tokens + line_tokens
-                start_line = i + 1 - len(overlap_lines)
-            else:
-                current_chunk.append(line)
-                current_tokens += line_tokens
-        
-        if current_chunk:
-            chunk_content = '\n'.join(current_chunk)
-            chunks.append(CodeChunk(
-                content=chunk_content,
-                file_metadata=file_metadata,
-                chunk_index=len(chunks),
-                chunk_type='section',
-                start_line=start_line,
-                end_line=len(lines),
-                tokens_count=current_tokens
-            ))
-        
-        return chunks
-    
     def process_file(self, file_path: Path, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Process a single file into chunks"""
+        """
+        Process a single file into chunks using appropriate language-specific chunker
+        
+        Args:
+            file_path: Path to the file
+            file_metadata: Metadata about the file
+            
+        Returns:
+            List of CodeChunk objects
+        """
         content = FileProcessor(str(file_path.parent)).read_file_content(file_path)
         if not content:
             return []
         
-        estimated_tokens = self.estimate_tokens(content)
+        # Get appropriate chunker for this file type
+        chunker = ChunkerFactory.get_chunker(
+            file_extension=file_metadata.file_type,
+            max_tokens=self.max_tokens,
+            overlap_tokens=self.overlap_tokens,
+            strategy=self.chunking_strategy
+        )
         
-        if estimated_tokens <= self.max_tokens:
-            return [CodeChunk(
-                content=content,
-                file_metadata=file_metadata,
-                chunk_index=0,
-                chunk_type='full_file',
-                start_line=1,
-                end_line=file_metadata.line_count,
-                tokens_count=estimated_tokens
-            )]
-        elif file_metadata.file_type == 'py':
-            return self.chunk_by_functions(content, file_metadata)
-        else:
-            return self.chunk_by_size(content, file_metadata) 
+        self.logger.info(f"Using {chunker.__class__.__name__} for {file_metadata.relative_path}")
+        
+        # Use the language-specific chunker
+        chunks = chunker.chunk_content(content, file_metadata)
+        
+        self.logger.info(f"Created {len(chunks)} chunks for {file_metadata.relative_path}")
+        return chunks
+    
+    # ============================================================================
+    # BACKWARD COMPATIBILITY METHODS 
+    # These methods are kept for backward compatibility with existing code
+    # ============================================================================
+    
+    def chunk_by_functions(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+        """
+        Legacy method: Chunk Python files by function/class boundaries
+        Kept for backward compatibility - now delegates to PythonChunker
+        """
+        self.logger.warning("Using legacy chunk_by_functions method - consider using process_file instead")
+        
+        # Use Python chunker with semantic-first strategy
+        chunker = ChunkerFactory.get_chunker(
+            file_extension='py',
+            max_tokens=self.max_tokens,
+            overlap_tokens=self.overlap_tokens,
+            strategy=ChunkingStrategy.SEMANTIC_FIRST
+        )
+        
+        return chunker.chunk_content(content, file_metadata)
+    
+    def chunk_by_size(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+        """
+        Legacy method: Chunk content by token size with overlap
+        Kept for backward compatibility - now delegates to base chunker
+        """
+        self.logger.warning("Using legacy chunk_by_size method - consider using process_file instead")
+        
+        # Use any chunker with size-first strategy
+        chunker = ChunkerFactory.get_chunker(
+            file_extension=file_metadata.file_type,
+            max_tokens=self.max_tokens,
+            overlap_tokens=self.overlap_tokens,
+            strategy=ChunkingStrategy.SIZE_FIRST
+        )
+        
+        return chunker.chunk_content(content, file_metadata)
+    
+    # ============================================================================
+    # NEW ADVANCED METHODS
+    # ============================================================================
+    
+    def set_chunking_strategy(self, strategy: ChunkingStrategy):
+        """Change the chunking strategy"""
+        self.chunking_strategy = strategy
+        self.logger.info(f"Chunking strategy changed to: {strategy.value}")
+    
+    def get_supported_file_types(self) -> List[str]:
+        """Get list of supported file types"""
+        return ChunkerFactory.get_supported_extensions()
+    
+    def is_file_type_supported(self, file_extension: str) -> bool:
+        """Check if a file type has specific chunking support"""
+        return ChunkerFactory.is_supported(file_extension)
+    
+    def process_file_with_strategy(self, file_path: Path, file_metadata: FileMetadata, 
+                                  strategy: ChunkingStrategy) -> List[CodeChunk]:
+        """Process a file with a specific chunking strategy (without changing default)"""
+        content = FileProcessor(str(file_path.parent)).read_file_content(file_path)
+        if not content:
+            return []
+        
+        # Get chunker with specific strategy
+        chunker = ChunkerFactory.get_chunker(
+            file_extension=file_metadata.file_type,
+            max_tokens=self.max_tokens,
+            overlap_tokens=self.overlap_tokens,
+            strategy=strategy
+        )
+        
+        return chunker.chunk_content(content, file_metadata)
+    
+    def analyze_chunking_impact(self, file_path: Path, file_metadata: FileMetadata) -> dict:
+        """
+        Analyze how different chunking strategies would affect a file
+        Returns comparison of different strategies
+        """
+        content = FileProcessor(str(file_path.parent)).read_file_content(file_path)
+        if not content:
+            return {}
+        
+        strategies = [
+            ChunkingStrategy.SEMANTIC_FIRST,
+            ChunkingStrategy.SIZE_FIRST,
+            ChunkingStrategy.HIERARCHICAL,
+            ChunkingStrategy.BALANCED,
+            ChunkingStrategy.FUNCTION_AWARE
+        ]
+        
+        analysis = {}
+        
+        for strategy in strategies:
+            try:
+                chunker = ChunkerFactory.get_chunker(
+                    file_extension=file_metadata.file_type,
+                    max_tokens=self.max_tokens,
+                    overlap_tokens=self.overlap_tokens,
+                    strategy=strategy
+                )
+                
+                chunks = chunker.chunk_content(content, file_metadata)
+                
+                token_counts = [chunk.tokens_count for chunk in chunks]
+                
+                analysis[strategy.value] = {
+                    'total_chunks': len(chunks),
+                    'avg_tokens': sum(token_counts) / len(token_counts) if token_counts else 0,
+                    'max_tokens': max(token_counts) if token_counts else 0,
+                    'min_tokens': min(token_counts) if token_counts else 0,
+                    'oversized_chunks': len([t for t in token_counts if t > self.max_tokens]),
+                    'chunk_types': list(set(chunk.chunk_type for chunk in chunks))
+                }
+                
+            except Exception as e:
+                analysis[strategy.value] = {'error': str(e)}
+        
+        return analysis 

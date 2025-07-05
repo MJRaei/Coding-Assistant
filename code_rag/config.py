@@ -28,7 +28,7 @@ DEFAULT_EXCLUDED_DIRS: List[str] = os.getenv(
 
 DEFAULT_INCLUDED_EXTENSIONS: List[str] = os.getenv(
     'INCLUDED_EXTENSIONS',
-    '.py,.md,.txt,.yml,.yaml,.json,.sql,.js,.ts,.jsx,.tsx,.css,.scss,.html,.xml,.toml,.cfg,.ini'
+    '.py,.md,.txt,.yml,.yaml,.json,.sql,.js,.ts,.jsx,.tsx,.css,.scss,.html,.xml,.qml,.toml,.cfg,.ini'
 ).split(',')
 
 DEFAULT_MAX_TOKENS = int(os.getenv('DEFAULT_MAX_TOKENS', '2000'))

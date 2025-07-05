@@ -54,7 +54,7 @@ class CodeSearch:
         
         formatted_results = []
         for chunk, score in results:
-            formatted_results.append({
+            result_dict = {
                 'content': chunk.content,
                 'score': score,
                 'file_path': chunk.file_metadata.relative_path,
@@ -64,7 +64,23 @@ class CodeSearch:
                 'functions': chunk.file_metadata.functions,
                 'classes': chunk.file_metadata.classes,
                 'metadata': asdict(chunk.file_metadata)
-            })
+            }
+            
+            # Add FUNCTION_AWARE enhanced metadata if available
+            if hasattr(chunk, 'parent_class') and chunk.parent_class:
+                result_dict['parent_class'] = chunk.parent_class
+            if hasattr(chunk, 'parent_function') and chunk.parent_function:
+                result_dict['parent_function'] = chunk.parent_function
+            if hasattr(chunk, 'semantic_id') and chunk.semantic_id:
+                result_dict['semantic_id'] = chunk.semantic_id
+            if hasattr(chunk, 'function_part_index') and chunk.function_part_index is not None:
+                result_dict['function_part_index'] = chunk.function_part_index
+            if hasattr(chunk, 'related_chunks') and chunk.related_chunks:
+                result_dict['related_chunks'] = chunk.related_chunks
+            if hasattr(chunk, 'chunk_metadata') and chunk.chunk_metadata:
+                result_dict['chunk_metadata'] = chunk.chunk_metadata
+            
+            formatted_results.append(result_dict)
         
         self.logger.info(f"Found {len(formatted_results)} results")
         return formatted_results

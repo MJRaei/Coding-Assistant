@@ -8,10 +8,19 @@ from .embedding_processor import EmbeddingProcessor
 from .vector_store import VectorStore
 from .index_builder import IndexBuilder
 
+# Import new chunking components
+from .chunking import ChunkerFactory, ChunkingStrategy, BoundaryType, BaseLanguageChunker, PythonChunker
+
 __all__ = [
     'FileProcessor',
     'ChunkProcessor', 
     'EmbeddingProcessor',
     'VectorStore',
-    'IndexBuilder'
+    'IndexBuilder',
+    # New chunking exports
+    'ChunkerFactory',
+    'ChunkingStrategy', 
+    'BoundaryType',
+    'BaseLanguageChunker',
+    'PythonChunker'
 ] 
