@@ -7,6 +7,7 @@ import logging
 
 from .base_chunker import BaseLanguageChunker, ChunkingStrategy
 from .python_chunker import PythonChunker
+from .qml_chunker import QMLChunker
 
 
 class ChunkerFactory:
@@ -17,6 +18,8 @@ class ChunkerFactory:
         'py': PythonChunker,
         'pyx': PythonChunker,
         'pyi': PythonChunker,
+        'qml': QMLChunker,
+        'qmldir': QMLChunker,
     }
     
     @classmethod

@@ -30,10 +30,10 @@ def main():
     # =============================================================================
     
     # Directory to analyze
-    TARGET_DIRECTORY = "/Users/mjraei/Desktop/Projects/OplaSmart/engReports"
+    TARGET_DIRECTORY = "/Users/mjraei/Desktop/Projects/OplaSmart/resources/EngReportComponents"
     
     # Question to ask (MODIFY THIS to ask different questions)
-    QUESTION = "How are pump calculations performed in the reporting system?"
+    QUESTION = "What is settings list model of displacement?"
     
     # Where to save the index
     CURRENT_PROJECT = Path(__file__).parent.parent
@@ -156,11 +156,50 @@ def main():
             print(f"   Lines: {result['line_range']}")
             print(f"   Type: {result['chunk_type']}")
             
-            # Show FUNCTION_AWARE metadata if available
-            if 'parent_class' in result:
-                print(f"   Class: {result['parent_class']}")
-            if 'parent_function' in result:
-                print(f"   Function: {result['parent_function']}")
+            # Show enhanced metadata based on file type
+            file_ext = result['file_path'].split('.')[-1].lower()
+            
+            if file_ext == 'qml':
+                print(f"   🎯 QML Component:")
+                if 'chunk_metadata' in result and result['chunk_metadata']:
+                    metadata = result['chunk_metadata']
+                    if 'component_type' in metadata:
+                        print(f"     Type: {metadata['component_type']}")
+                    if 'is_root_component' in metadata:
+                        root_status = "Yes" if metadata['is_root_component'] else "No"
+                        print(f"     Root: {root_status}")
+                    if 'qml_imports' in metadata and metadata['qml_imports']:
+                        print(f"     Imports: {', '.join(metadata['qml_imports'])}")
+                    if 'is_complete_file' in metadata and metadata['is_complete_file']:
+                        print(f"     Complete File: Yes")
+                if 'parent_class' in result:
+                    print(f"     Parent: {result['parent_class']}")
+                if 'semantic_id' in result:
+                    print(f"     ID: {result['semantic_id']}")
+                    
+            elif file_ext == 'py':
+                print(f"   🐍 Python Code:")
+                if 'chunk_metadata' in result and result['chunk_metadata']:
+                    metadata = result['chunk_metadata']
+                    if 'element_type' in metadata:
+                        print(f"     Type: {metadata['element_type'].title()}")
+                    if 'decorators' in metadata and metadata['decorators']:
+                        print(f"     Decorators: {', '.join(metadata['decorators'])}")
+                if 'parent_class' in result:
+                    print(f"     Class: {result['parent_class']}")
+                if 'parent_function' in result:
+                    print(f"     Function: {result['parent_function']}")
+                if 'semantic_id' in result:
+                    print(f"     ID: {result['semantic_id']}")
+                    
+            else:
+                # Generic metadata for other file types
+                if 'parent_class' in result:
+                    print(f"   Class: {result['parent_class']}")
+                if 'parent_function' in result:
+                    print(f"   Function: {result['parent_function']}")
+                if 'semantic_id' in result:
+                    print(f"   ID: {result['semantic_id']}")
             
             print(f"   Preview: {result['content'][:150]}...")
             print()
@@ -182,6 +221,16 @@ def main():
     print("🗂️  Index files created:")
     print(f"   • {DATA_DIR / INDEX_NAME}.faiss")
     print(f"   • {DATA_DIR / INDEX_NAME}.chunks")
+    
+    # Show QML chunking support
+    print("\n🎯 QML Chunking Support:")
+    print("   QML files will now be chunked with component-aware strategy!")
+    print("   Supported QML features:")
+    print("   • Component definitions (Rectangle, Button, etc.)")
+    print("   • Property declarations and bindings")
+    print("   • Signal declarations and handlers")
+    print("   • JavaScript functions within QML")
+    print("   • Import statements and pragmas")
 
 
 if __name__ == "__main__":

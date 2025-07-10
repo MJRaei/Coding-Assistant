@@ -18,7 +18,7 @@ def main():
     """Main function to demonstrate the Code RAG system."""
     
     # Target directory to chunk
-    project_dir = Path("/Users/mjraei/Desktop/Projects/OplaSmart/engReports")
+    project_dir = Path("/Users/mjraei/Desktop/Projects/OplaSmart/resources/EngReportComponents")
     
     # Define paths - store data in the current code embedder project
     current_project = Path(__file__).parent.parent
@@ -113,21 +113,87 @@ def inspect_chunks(builder, max_chunks=None):
         print(f"Token count: {chunk.tokens_count}")
         print(f"Chunk type: {chunk.chunk_type}")
         
-        # FUNCTION_AWARE enhanced metadata
-        if chunk.parent_class or chunk.parent_function or chunk.semantic_id:
-            print(f"\n🎯 FUNCTION_AWARE Metadata:")
-            if chunk.parent_class:
-                print(f"Parent Class: {chunk.parent_class}")
-            if chunk.parent_function:
-                print(f"Parent Function: {chunk.parent_function}")
-            if chunk.function_part_index is not None:
-                print(f"Function Part: {chunk.function_part_index}")
-            if chunk.semantic_id:
-                print(f"Semantic ID: {chunk.semantic_id}")
-            if chunk.related_chunks:
-                print(f"Related Chunks: {chunk.related_chunks}")
-            if chunk.chunk_metadata:
-                print(f"Extra Metadata: {chunk.chunk_metadata}")
+        # Enhanced metadata display based on file type
+        if chunk.parent_class or chunk.parent_function or chunk.semantic_id or chunk.chunk_metadata:
+            file_type = metadata.file_type.lower()
+            
+            if file_type == 'qml':
+                print(f"\n🎯 QML Component Metadata:")
+                
+                # QML-specific information
+                if chunk.chunk_metadata:
+                    if 'component_type' in chunk.chunk_metadata:
+                        print(f"Component Type: {chunk.chunk_metadata['component_type']}")
+                    if 'is_root_component' in chunk.chunk_metadata:
+                        root_status = "Yes" if chunk.chunk_metadata['is_root_component'] else "No"
+                        print(f"Root Component: {root_status}")
+                    if 'qml_imports' in chunk.chunk_metadata and chunk.chunk_metadata['qml_imports']:
+                        print(f"QML Imports: {', '.join(chunk.chunk_metadata['qml_imports'])}")
+                    if 'qml_properties' in chunk.chunk_metadata and chunk.chunk_metadata['qml_properties']:
+                        print(f"QML Properties: {', '.join(chunk.chunk_metadata['qml_properties'])}")
+                    if 'qml_signals' in chunk.chunk_metadata and chunk.chunk_metadata['qml_signals']:
+                        print(f"QML Signals: {', '.join(chunk.chunk_metadata['qml_signals'])}")
+                    if 'qml_functions' in chunk.chunk_metadata and chunk.chunk_metadata['qml_functions']:
+                        print(f"QML Functions: {', '.join(chunk.chunk_metadata['qml_functions'])}")
+                    if 'is_complete_file' in chunk.chunk_metadata and chunk.chunk_metadata['is_complete_file']:
+                        print(f"Complete File: Yes")
+                
+                # General chunk information
+                if chunk.parent_class:
+                    print(f"Parent Component: {chunk.parent_class}")
+                if chunk.semantic_id:
+                    print(f"Semantic ID: {chunk.semantic_id}")
+                if chunk.function_part_index is not None:
+                    print(f"Component Part: {chunk.function_part_index}")
+                if chunk.related_chunks:
+                    print(f"Related Chunks: {chunk.related_chunks}")
+                    
+            elif file_type == 'py':
+                print(f"\n🐍 Python Code Metadata:")
+                
+                # Python-specific information
+                if chunk.chunk_metadata:
+                    if 'element_type' in chunk.chunk_metadata:
+                        element_type = chunk.chunk_metadata['element_type']
+                        print(f"Element Type: {element_type.title()}")
+                    if 'decorators' in chunk.chunk_metadata and chunk.chunk_metadata['decorators']:
+                        print(f"Decorators: {', '.join(chunk.chunk_metadata['decorators'])}")
+                    if 'is_async' in chunk.chunk_metadata and chunk.chunk_metadata['is_async']:
+                        print(f"Async Function: Yes")
+                    if 'is_property' in chunk.chunk_metadata and chunk.chunk_metadata['is_property']:
+                        print(f"Property Method: Yes")
+                    if 'class_name' in chunk.chunk_metadata:
+                        print(f"Class Name: {chunk.chunk_metadata['class_name']}")
+                    if 'method_index' in chunk.chunk_metadata:
+                        print(f"Method Index: {chunk.chunk_metadata['method_index']}")
+                
+                # General Python information
+                if chunk.parent_class:
+                    print(f"Parent Class: {chunk.parent_class}")
+                if chunk.parent_function:
+                    print(f"Parent Function: {chunk.parent_function}")
+                if chunk.semantic_id:
+                    print(f"Semantic ID: {chunk.semantic_id}")
+                if chunk.function_part_index is not None:
+                    print(f"Function Part: {chunk.function_part_index}")
+                if chunk.related_chunks:
+                    print(f"Related Chunks: {chunk.related_chunks}")
+                    
+            else:
+                # Generic metadata for other file types
+                print(f"\n🎯 Code Metadata ({file_type.upper()}):")
+                if chunk.parent_class:
+                    print(f"Parent Class: {chunk.parent_class}")
+                if chunk.parent_function:
+                    print(f"Parent Function: {chunk.parent_function}")
+                if chunk.function_part_index is not None:
+                    print(f"Function Part: {chunk.function_part_index}")
+                if chunk.semantic_id:
+                    print(f"Semantic ID: {chunk.semantic_id}")
+                if chunk.related_chunks:
+                    print(f"Related Chunks: {chunk.related_chunks}")
+                if chunk.chunk_metadata:
+                    print(f"Metadata: {chunk.chunk_metadata}")
         
         # Content
         print(f"\nContent:")
@@ -166,15 +232,55 @@ def test_search(data_dir, strategy_name):
                 print(f"    Chunk type: {result.get('chunk_type', 'N/A')}")
                 print(f"    Line range: {result.get('line_range', 'N/A')}")
                 
-                # Show enhanced FUNCTION_AWARE metadata if available
-                if 'parent_class' in result:
-                    print(f"    Parent Class: {result['parent_class']}")
-                if 'parent_function' in result:
-                    print(f"    Parent Function: {result['parent_function']}")
-                if 'semantic_id' in result:
-                    print(f"    Semantic ID: {result['semantic_id']}")
+                # Show enhanced metadata based on file type
+                file_ext = result['file_path'].split('.')[-1].lower()
+                
+                if file_ext == 'qml':
+                    print(f"    🎯 QML Info:")
+                    if 'chunk_metadata' in result and result['chunk_metadata']:
+                        metadata = result['chunk_metadata']
+                        if 'component_type' in metadata:
+                            print(f"      Component: {metadata['component_type']}")
+                        if 'is_root_component' in metadata:
+                            root_status = "Yes" if metadata['is_root_component'] else "No"
+                            print(f"      Root Component: {root_status}")
+                        if 'qml_imports' in metadata and metadata['qml_imports']:
+                            print(f"      Imports: {', '.join(metadata['qml_imports'])}")
+                        if 'is_complete_file' in metadata and metadata['is_complete_file']:
+                            print(f"      Complete File: Yes")
+                    if 'parent_class' in result:
+                        print(f"      Parent Component: {result['parent_class']}")
+                    if 'semantic_id' in result:
+                        print(f"      Semantic ID: {result['semantic_id']}")
+                        
+                elif file_ext == 'py':
+                    print(f"    🐍 Python Info:")
+                    if 'chunk_metadata' in result and result['chunk_metadata']:
+                        metadata = result['chunk_metadata']
+                        if 'element_type' in metadata:
+                            print(f"      Element: {metadata['element_type'].title()}")
+                        if 'decorators' in metadata and metadata['decorators']:
+                            print(f"      Decorators: {', '.join(metadata['decorators'])}")
+                        if 'is_async' in metadata and metadata['is_async']:
+                            print(f"      Async: Yes")
+                    if 'parent_class' in result:
+                        print(f"      Parent Class: {result['parent_class']}")
+                    if 'parent_function' in result:
+                        print(f"      Parent Function: {result['parent_function']}")
+                    if 'semantic_id' in result:
+                        print(f"      Semantic ID: {result['semantic_id']}")
+                        
+                else:
+                    # Generic metadata for other file types
+                    if 'parent_class' in result:
+                        print(f"    Parent Class: {result['parent_class']}")
+                    if 'parent_function' in result:
+                        print(f"    Parent Function: {result['parent_function']}")
+                    if 'semantic_id' in result:
+                        print(f"    Semantic ID: {result['semantic_id']}")
+                
                 if 'function_part_index' in result:
-                    print(f"    Function Part: {result['function_part_index']}")
+                    print(f"    Part Index: {result['function_part_index']}")
                 
                 print(f"    Content preview: {result['content'][:150]}...")
                 print()
