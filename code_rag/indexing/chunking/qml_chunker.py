@@ -212,11 +212,16 @@ class QMLChunker(BaseLanguageChunker):
                 elif path == '../':
                     return "ParentComponents"
                 else:
-                    # Use last part of path
+                    # Use last part of path or the path itself
                     return path.split('/')[-1] or "RelativeImport"
             else:
-                # Standard import like QtQuick.Controls
-                return import_path.split('.')[0]
+                # Standard import like QtQuick.Controls - keep more specific name
+                if '.' in import_path:
+                    # For QtQuick.Controls, return "QtQuick.Controls" instead of just "QtQuick"
+                    return import_path
+                else:
+                    # For simple imports like QtQuick, return as is
+                    return import_path
         return "import"
     
     def _get_indent_level(self, line: str) -> int:
@@ -278,8 +283,8 @@ class QMLChunker(BaseLanguageChunker):
     
     def _create_single_file_chunk(self, content: str, file_metadata: FileMetadata, boundaries: List[CodeBoundary]) -> List[CodeChunk]:
         """Create a single chunk for small QML files with complete metadata"""
-        # Extract metadata from boundaries
-        imports = []
+        # Extract metadata from boundaries with deduplication
+        imports = set()  # Use set to automatically deduplicate
         components = []
         properties = []
         signals = []
@@ -287,7 +292,7 @@ class QMLChunker(BaseLanguageChunker):
         
         for boundary in boundaries:
             if boundary.boundary_type == BoundaryType.IMPORT:
-                imports.append(boundary.name)
+                imports.add(boundary.name)
             elif boundary.boundary_type == BoundaryType.CLASS:
                 components.append(boundary.name)
             elif boundary.boundary_type == BoundaryType.PROPERTY:
@@ -298,6 +303,12 @@ class QMLChunker(BaseLanguageChunker):
                     signals.append(boundary.name)
                 else:
                     functions.append(boundary.name)
+            elif boundary.boundary_type == BoundaryType.METHOD:
+                # Also include methods as signal handlers
+                signals.append(boundary.name)
+        
+        # Convert imports set back to sorted list for consistent output
+        imports_list = sorted(list(imports))
         
         # Find the main component (usually the first one)
         main_component = components[0] if components else "QMLItem"
@@ -318,7 +329,7 @@ class QMLChunker(BaseLanguageChunker):
                 'qml_properties': properties,
                 'qml_signals': signals,
                 'qml_functions': functions,
-                'qml_imports': imports,
+                'qml_imports': imports_list,
                 'is_complete_file': True
             }
         )]

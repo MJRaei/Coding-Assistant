@@ -104,9 +104,18 @@ def inspect_chunks(builder, max_chunks=None):
         print(f"File type: {metadata.file_type}")
         print(f"File size: {metadata.file_size} bytes")
         print(f"Total lines: {metadata.line_count}")
-        print(f"Functions: {metadata.functions}")
-        print(f"Classes: {metadata.classes}")
-        print(f"Imports: {metadata.imports}")
+        
+        # Only show file-level metadata if it's populated (mainly for Python files)
+        file_type = metadata.file_type.lower()
+        if file_type != 'qml':  # For non-QML files, show file-level metadata
+            print(f"Functions: {metadata.functions}")
+            print(f"Classes: {metadata.classes}")
+            print(f"Imports: {metadata.imports}")
+        elif metadata.functions or metadata.classes or metadata.imports:
+            # For QML files, only show if actually populated (future enhancement)
+            print(f"Functions: {metadata.functions}")
+            print(f"Classes: {metadata.classes}")
+            print(f"Imports: {metadata.imports}")
         
         # Chunk info
         print(f"Chunk lines: {chunk.start_line}-{chunk.end_line}")
@@ -115,38 +124,72 @@ def inspect_chunks(builder, max_chunks=None):
         
         # Enhanced metadata display based on file type
         if chunk.parent_class or chunk.parent_function or chunk.semantic_id or chunk.chunk_metadata:
-            file_type = metadata.file_type.lower()
             
             if file_type == 'qml':
                 print(f"\n🎯 QML Component Metadata:")
                 
-                # QML-specific information
+                # QML-specific information from chunk_metadata
                 if chunk.chunk_metadata:
+                    # Component information
                     if 'component_type' in chunk.chunk_metadata:
                         print(f"Component Type: {chunk.chunk_metadata['component_type']}")
+                    if 'element_name' in chunk.chunk_metadata:
+                        print(f"Element Name: {chunk.chunk_metadata['element_name']}")
+                    if 'element_type' in chunk.chunk_metadata:
+                        print(f"Element Type: {chunk.chunk_metadata['element_type']}")
                     if 'is_root_component' in chunk.chunk_metadata:
                         root_status = "Yes" if chunk.chunk_metadata['is_root_component'] else "No"
                         print(f"Root Component: {root_status}")
-                    if 'qml_imports' in chunk.chunk_metadata and chunk.chunk_metadata['qml_imports']:
-                        print(f"QML Imports: {', '.join(chunk.chunk_metadata['qml_imports'])}")
-                    if 'qml_properties' in chunk.chunk_metadata and chunk.chunk_metadata['qml_properties']:
-                        print(f"QML Properties: {', '.join(chunk.chunk_metadata['qml_properties'])}")
-                    if 'qml_signals' in chunk.chunk_metadata and chunk.chunk_metadata['qml_signals']:
-                        print(f"QML Signals: {', '.join(chunk.chunk_metadata['qml_signals'])}")
-                    if 'qml_functions' in chunk.chunk_metadata and chunk.chunk_metadata['qml_functions']:
-                        print(f"QML Functions: {', '.join(chunk.chunk_metadata['qml_functions'])}")
+                    
+                    # Part information for multi-chunk components
+                    if 'part_index' in chunk.chunk_metadata:
+                        print(f"Component Part: {chunk.chunk_metadata['part_index']}")
+                    if chunk.function_part_index is not None:
+                        print(f"Function Part Index: {chunk.function_part_index}")
+                    
+                    # Complete file indicator
                     if 'is_complete_file' in chunk.chunk_metadata and chunk.chunk_metadata['is_complete_file']:
                         print(f"Complete File: Yes")
+                    
+                    # QML imports
+                    if 'qml_imports' in chunk.chunk_metadata and chunk.chunk_metadata['qml_imports']:
+                        imports_list = chunk.chunk_metadata['qml_imports']
+                        print(f"QML Imports: {', '.join(imports_list)}")
+                    
+                    # QML properties
+                    if 'qml_properties' in chunk.chunk_metadata and chunk.chunk_metadata['qml_properties']:
+                        properties_list = chunk.chunk_metadata['qml_properties']
+                        print(f"QML Properties: {', '.join(properties_list)}")
+                    
+                    # QML signals
+                    if 'qml_signals' in chunk.chunk_metadata and chunk.chunk_metadata['qml_signals']:
+                        signals_list = chunk.chunk_metadata['qml_signals']
+                        print(f"QML Signals: {', '.join(signals_list)}")
+                    
+                    # QML functions
+                    if 'qml_functions' in chunk.chunk_metadata and chunk.chunk_metadata['qml_functions']:
+                        functions_list = chunk.chunk_metadata['qml_functions']
+                        print(f"QML Functions: {', '.join(functions_list)}")
                 
-                # General chunk information
-                if chunk.parent_class:
-                    print(f"Parent Component: {chunk.parent_class}")
+                # General chunk relationship information
                 if chunk.semantic_id:
                     print(f"Semantic ID: {chunk.semantic_id}")
-                if chunk.function_part_index is not None:
-                    print(f"Component Part: {chunk.function_part_index}")
+                if chunk.parent_class:
+                    print(f"Parent Component: {chunk.parent_class}")
                 if chunk.related_chunks:
                     print(f"Related Chunks: {chunk.related_chunks}")
+                
+                # Show any additional metadata fields not explicitly handled
+                if chunk.chunk_metadata:
+                    handled_keys = {
+                        'component_type', 'element_name', 'element_type', 'is_root_component',
+                        'part_index', 'is_complete_file', 'qml_imports', 'qml_properties',
+                        'qml_signals', 'qml_functions'
+                    }
+                    additional_metadata = {k: v for k, v in chunk.chunk_metadata.items() 
+                                         if k not in handled_keys and v is not None}
+                    if additional_metadata:
+                        print(f"Additional Metadata: {additional_metadata}")
                     
             elif file_type == 'py':
                 print(f"\n🐍 Python Code Metadata:")
