@@ -222,6 +222,90 @@ def inspect_chunks(builder, max_chunks=None):
                 if chunk.related_chunks:
                     print(f"Related Chunks: {chunk.related_chunks}")
                     
+            elif file_type in ['js', 'jsx', 'mjs', 'ts', 'tsx']:
+                print(f"\n🟨 JavaScript Code Metadata:")
+                
+                # JavaScript-specific information from chunk_metadata
+                if chunk.chunk_metadata:
+                    # Framework and module information
+                    if 'framework_type' in chunk.chunk_metadata and chunk.chunk_metadata['framework_type']:
+                        print(f"Framework: {chunk.chunk_metadata['framework_type']}")
+                    if 'module_type' in chunk.chunk_metadata and chunk.chunk_metadata['module_type']:
+                        print(f"Module System: {chunk.chunk_metadata['module_type']}")
+                    
+                    # Element information
+                    if 'element_name' in chunk.chunk_metadata:
+                        print(f"Element Name: {chunk.chunk_metadata['element_name']}")
+                    if 'element_type' in chunk.chunk_metadata:
+                        print(f"Element Type: {chunk.chunk_metadata['element_type']}")
+                    if 'function_type' in chunk.chunk_metadata and chunk.chunk_metadata['function_type']:
+                        print(f"Function Type: {chunk.chunk_metadata['function_type']}")
+                    
+                    # Part information for multi-chunk elements
+                    if 'part_index' in chunk.chunk_metadata:
+                        print(f"Element Part: {chunk.chunk_metadata['part_index']}")
+                    if chunk.function_part_index is not None:
+                        print(f"Function Part Index: {chunk.function_part_index}")
+                    
+                    # Complete file indicator
+                    if 'is_complete_file' in chunk.chunk_metadata and chunk.chunk_metadata['is_complete_file']:
+                        print(f"Complete File: Yes")
+                    
+                    # JavaScript imports and exports
+                    if 'js_imports' in chunk.chunk_metadata and chunk.chunk_metadata['js_imports']:
+                        imports_list = chunk.chunk_metadata['js_imports']
+                        print(f"JS Imports: {', '.join(imports_list)}")
+                    if 'js_exports' in chunk.chunk_metadata and chunk.chunk_metadata['js_exports']:
+                        exports_list = chunk.chunk_metadata['js_exports']
+                        print(f"JS Exports: {', '.join(exports_list)}")
+                    
+                    # JavaScript functions and classes
+                    if 'js_functions' in chunk.chunk_metadata and chunk.chunk_metadata['js_functions']:
+                        functions_list = chunk.chunk_metadata['js_functions']
+                        print(f"JS Functions: {', '.join(functions_list)}")
+                    if 'js_classes' in chunk.chunk_metadata and chunk.chunk_metadata['js_classes']:
+                        classes_list = chunk.chunk_metadata['js_classes']
+                        print(f"JS Classes: {', '.join(classes_list)}")
+                    
+                    # JavaScript variables and async functions
+                    if 'js_variables' in chunk.chunk_metadata and chunk.chunk_metadata['js_variables']:
+                        variables_list = chunk.chunk_metadata['js_variables']
+                        print(f"JS Variables: {', '.join(variables_list)}")
+                    if 'js_async_functions' in chunk.chunk_metadata and chunk.chunk_metadata['js_async_functions']:
+                        async_functions_list = chunk.chunk_metadata['js_async_functions']
+                        print(f"Async Functions: {', '.join(async_functions_list)}")
+                    
+                    # Special function types
+                    if 'is_async' in chunk.chunk_metadata and chunk.chunk_metadata['is_async']:
+                        print(f"Is Async: Yes")
+                    if 'is_export' in chunk.chunk_metadata and chunk.chunk_metadata['is_export']:
+                        print(f"Is Export: Yes")
+                    if 'is_constructor' in chunk.chunk_metadata and chunk.chunk_metadata['is_constructor']:
+                        print(f"Is Constructor: Yes")
+                
+                # General chunk relationship information
+                if chunk.semantic_id:
+                    print(f"Semantic ID: {chunk.semantic_id}")
+                if chunk.parent_class:
+                    print(f"Parent Class: {chunk.parent_class}")
+                if chunk.parent_function:
+                    print(f"Parent Function: {chunk.parent_function}")
+                if chunk.related_chunks:
+                    print(f"Related Chunks: {chunk.related_chunks}")
+                
+                # Show any additional metadata fields not explicitly handled
+                if chunk.chunk_metadata:
+                    handled_keys = {
+                        'framework_type', 'module_type', 'element_name', 'element_type', 
+                        'function_type', 'part_index', 'is_complete_file', 'js_imports', 
+                        'js_exports', 'js_functions', 'js_classes', 'js_variables', 
+                        'js_async_functions', 'is_async', 'is_export', 'is_constructor'
+                    }
+                    additional_metadata = {k: v for k, v in chunk.chunk_metadata.items() 
+                                         if k not in handled_keys and v is not None}
+                    if additional_metadata:
+                        print(f"Additional Metadata: {additional_metadata}")
+                        
             else:
                 # Generic metadata for other file types
                 print(f"\n🎯 Code Metadata ({file_type.upper()}):")
@@ -306,6 +390,45 @@ def test_search(data_dir, strategy_name):
                             print(f"      Decorators: {', '.join(metadata['decorators'])}")
                         if 'is_async' in metadata and metadata['is_async']:
                             print(f"      Async: Yes")
+                    if 'parent_class' in result:
+                        print(f"      Parent Class: {result['parent_class']}")
+                    if 'parent_function' in result:
+                        print(f"      Parent Function: {result['parent_function']}")
+                    if 'semantic_id' in result:
+                        print(f"      Semantic ID: {result['semantic_id']}")
+                        
+                elif file_ext in ['js', 'jsx', 'mjs', 'ts', 'tsx']:
+                    print(f"    🟨 JavaScript Info:")
+                    if 'chunk_metadata' in result and result['chunk_metadata']:
+                        metadata = result['chunk_metadata']
+                        if 'framework_type' in metadata:
+                            print(f"      Framework: {metadata['framework_type']}")
+                        if 'module_type' in metadata:
+                            print(f"      Module System: {metadata['module_type']}")
+                        if 'element_name' in metadata:
+                            print(f"      Element Name: {metadata['element_name']}")
+                        if 'element_type' in metadata:
+                            print(f"      Element Type: {metadata['element_type']}")
+                        if 'function_type' in metadata:
+                            print(f"      Function Type: {metadata['function_type']}")
+                        if 'is_async' in metadata:
+                            print(f"      Is Async: Yes")
+                        if 'is_export' in metadata:
+                            print(f"      Is Export: Yes")
+                        if 'is_constructor' in metadata:
+                            print(f"      Is Constructor: Yes")
+                        if 'js_imports' in metadata and metadata['js_imports']:
+                            print(f"      JS Imports: {', '.join(metadata['js_imports'])}")
+                        if 'js_exports' in metadata and metadata['js_exports']:
+                            print(f"      JS Exports: {', '.join(metadata['js_exports'])}")
+                        if 'js_functions' in metadata and metadata['js_functions']:
+                            print(f"      JS Functions: {', '.join(metadata['js_functions'])}")
+                        if 'js_classes' in metadata and metadata['js_classes']:
+                            print(f"      JS Classes: {', '.join(metadata['js_classes'])}")
+                        if 'js_variables' in metadata and metadata['js_variables']:
+                            print(f"      JS Variables: {', '.join(metadata['js_variables'])}")
+                        if 'js_async_functions' in metadata and metadata['js_async_functions']:
+                            print(f"      Async Functions: {', '.join(metadata['js_async_functions'])}")
                     if 'parent_class' in result:
                         print(f"      Parent Class: {result['parent_class']}")
                     if 'parent_function' in result:

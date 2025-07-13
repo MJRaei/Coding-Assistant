@@ -8,6 +8,7 @@ import logging
 from .base_chunker import BaseLanguageChunker, ChunkingStrategy
 from .python_chunker import PythonChunker
 from .qml_chunker import QMLChunker
+from .js_chunker import JSChunker
 
 
 class ChunkerFactory:
@@ -20,6 +21,11 @@ class ChunkerFactory:
         'pyi': PythonChunker,
         'qml': QMLChunker,
         'qmldir': QMLChunker,
+        'js': JSChunker,
+        'jsx': JSChunker,
+        'mjs': JSChunker,
+        'ts': JSChunker,
+        'tsx': JSChunker,
     }
     
     @classmethod

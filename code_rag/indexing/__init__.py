@@ -9,7 +9,7 @@ from .vector_store import VectorStore
 from .index_builder import IndexBuilder
 
 # Import new chunking components
-from .chunking import ChunkerFactory, ChunkingStrategy, BoundaryType, BaseLanguageChunker, PythonChunker
+from .chunking import ChunkerFactory, ChunkingStrategy, BoundaryType, BaseLanguageChunker, PythonChunker, JSChunker
 
 __all__ = [
     'FileProcessor',
@@ -22,5 +22,6 @@ __all__ = [
     'ChunkingStrategy', 
     'BoundaryType',
     'BaseLanguageChunker',
-    'PythonChunker'
+    'PythonChunker',
+    'JSChunker'
 ] 
