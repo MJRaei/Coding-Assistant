@@ -5,26 +5,37 @@ from .chunk_processor import ChunkProcessor
 from .embedding_processor import EmbeddingProcessor
 from .vector_store import VectorStore
 from .chunking import ChunkingStrategy
-from ..config import get_openai_api_key, DEFAULT_EMBEDDING_MODEL, DEFAULT_LOG_LEVEL, ensure_directories_exist
+from ..config import (
+    get_openai_api_key, 
+    DEFAULT_EMBEDDING_PROVIDER, 
+    DEFAULT_EMBEDDING_MODEL, 
+    DEFAULT_LOG_LEVEL, 
+    ensure_directories_exist
+)
 
 
 class IndexBuilder:
     """Main orchestrator for building code embeddings and vector indices"""
     
     def __init__(self, project_directory: str = None, data_directory: str = None, 
-                 root_path: str = None, openai_api_key: str = None, 
-                 embedding_model: str = None, 
+                 root_path: str = None, 
+                 embedding_provider: str = None,
+                 embedding_model: str = None,
+                 embedding_config: dict = None,
+                 openai_api_key: str = None,
                  chunking_strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         """
-        Initialize the Index Builder
+        Initialize the Index Builder with flexible embedding support
         
         Args:
-            project_directory: Path to your code repository (new parameter)
-            data_directory: Path to store index data (new parameter)
-            root_path: Path to your code repository (legacy parameter, use project_directory instead)
-            openai_api_key: OpenAI API key (if None, uses config to get from env)
-            embedding_model: OpenAI embedding model to use (uses config default if None)
-            chunking_strategy: Chunking strategy to use for processing files
+            project_directory: Path to your code repository
+            data_directory: Path to store index data
+            root_path: Legacy parameter (use project_directory instead)
+            embedding_provider: Provider type ('openai', 'huggingface', 'ollama')
+            embedding_model: Model name for embeddings
+            embedding_config: Provider-specific configuration
+            openai_api_key: OpenAI API key (legacy, for backward compatibility)
+            chunking_strategy: Chunking strategy to use
         """
         if project_directory:
             self.root_path = project_directory
@@ -35,20 +46,35 @@ class IndexBuilder:
         
         self.data_directory = data_directory
         
-        api_key = openai_api_key or get_openai_api_key()
+        embedding_provider = embedding_provider or DEFAULT_EMBEDDING_PROVIDER
         embedding_model = embedding_model or DEFAULT_EMBEDDING_MODEL
+        embedding_config = embedding_config or {}
+        
+        if openai_api_key and embedding_provider == 'openai':
+            embedding_config['api_key'] = openai_api_key
+        elif embedding_provider == 'openai' and 'api_key' not in embedding_config:
+            try:
+                embedding_config['api_key'] = get_openai_api_key()
+            except ValueError:
+                pass
         
         self.file_processor = FileProcessor(self.root_path)
         self.chunk_processor = ChunkProcessor(chunking_strategy=chunking_strategy)
-        self.embedding_processor = EmbeddingProcessor(api_key, embedding_model)
+        self.embedding_processor = EmbeddingProcessor(
+            provider_type=embedding_provider,
+            model_name=embedding_model,
+            **embedding_config
+        )
         
         embedding_dim = self.embedding_processor.get_embedding_dimension()
         self.vector_store = VectorStore(dimension=embedding_dim)
         
         self.logger = logging.getLogger(__name__)
-        
         logging.basicConfig(level=getattr(logging, DEFAULT_LOG_LEVEL))
         ensure_directories_exist()
+        
+        provider_info = self.embedding_processor.get_provider_info()
+        self.logger.info(f"Initialized with {provider_info['provider']} provider, model: {provider_info['model']}")
     
     def build_index(self, save_to_data_dir: bool = True):
         """Build the complete RAG index"""
@@ -84,7 +110,8 @@ class IndexBuilder:
         return index_path or {
             'total_files': len(files),
             'total_chunks': len(all_chunks),
-            'vector_store_stats': self.vector_store.get_stats()
+            'vector_store_stats': self.vector_store.get_stats(),
+            'embedding_provider': self.embedding_processor.get_provider_info()
         }
     
     def save_index(self, filepath: str):
@@ -94,4 +121,8 @@ class IndexBuilder:
     
     def get_vector_store(self) -> VectorStore:
         """Get the vector store (for use by retrieval components)"""
-        return self.vector_store 
+        return self.vector_store
+    
+    def get_embedding_processor(self) -> EmbeddingProcessor:
+        """Get the embedding processor (for use by retrieval components)"""
+        return self.embedding_processor 

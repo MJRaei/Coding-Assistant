@@ -11,8 +11,9 @@ try:
 except ImportError:
     pass
 
-# OpenAI Configuration
-DEFAULT_EMBEDDING_MODEL = os.getenv('DEFAULT_EMBEDDING_MODEL', 'text-embedding-3-small')
+DEFAULT_EMBEDDING_PROVIDER = os.getenv('EMBEDDING_PROVIDER', 'openai')
+DEFAULT_EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')
+
 DEFAULT_CHAT_MODEL = os.getenv('DEFAULT_CHAT_MODEL', 'gpt-4o-mini')
 
 EMBEDDING_MODELS = {
@@ -39,6 +40,14 @@ DEFAULT_MAX_CHUNKS_FOR_CONTEXT = int(os.getenv('DEFAULT_MAX_CHUNKS_FOR_CONTEXT',
 
 OPENAI_BATCH_SIZE = int(os.getenv('OPENAI_BATCH_SIZE', '100'))
 OPENAI_RATE_LIMIT_DELAY = float(os.getenv('OPENAI_RATE_LIMIT_DELAY', '0.1'))
+
+HF_BATCH_SIZE = int(os.getenv('HF_BATCH_SIZE', '32'))
+HF_DEVICE = os.getenv('HF_DEVICE', 'cpu')
+HF_NORMALIZE = os.getenv('HF_NORMALIZE', 'true').lower() == 'true'
+
+OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
+OLLAMA_BATCH_SIZE = int(os.getenv('OLLAMA_BATCH_SIZE', '16'))
+OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '30'))
 
 DEFAULT_LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 

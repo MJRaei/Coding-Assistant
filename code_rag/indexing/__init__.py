@@ -9,6 +9,7 @@ from .vector_store import VectorStore
 from .index_builder import IndexBuilder
 
 from .chunking import ChunkerFactory, ChunkingStrategy, BoundaryType, BaseLanguageChunker, PythonChunker, JSChunker
+from .embeddings import EmbeddingProviderFactory, BaseEmbeddingProvider
 
 __all__ = [
     'FileProcessor',
@@ -21,5 +22,7 @@ __all__ = [
     'BoundaryType',
     'BaseLanguageChunker',
     'PythonChunker',
-    'JSChunker'
+    'JSChunker',
+    'EmbeddingProviderFactory',
+    'BaseEmbeddingProvider'
 ] 
