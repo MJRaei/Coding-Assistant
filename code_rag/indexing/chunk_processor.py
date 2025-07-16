@@ -11,7 +11,6 @@ from ..models import FileMetadata, CodeChunk
 from .file_processor import FileProcessor
 from ..config import DEFAULT_MAX_TOKENS, DEFAULT_OVERLAP_TOKENS
 
-# Import the new chunking system
 from .chunking import ChunkerFactory, ChunkingStrategy
 
 
@@ -59,7 +58,6 @@ class ChunkProcessor:
         if not content:
             return []
         
-        # Get appropriate chunker for this file type
         chunker = ChunkerFactory.get_chunker(
             file_extension=file_metadata.file_type,
             max_tokens=self.max_tokens,
@@ -69,16 +67,10 @@ class ChunkProcessor:
         
         self.logger.info(f"Using {chunker.__class__.__name__} for {file_metadata.relative_path}")
         
-        # Use the language-specific chunker
         chunks = chunker.chunk_content(content, file_metadata)
         
         self.logger.info(f"Created {len(chunks)} chunks for {file_metadata.relative_path}")
         return chunks
-    
-    # ============================================================================
-    # BACKWARD COMPATIBILITY METHODS 
-    # These methods are kept for backward compatibility with existing code
-    # ============================================================================
     
     def chunk_by_functions(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """
@@ -87,7 +79,6 @@ class ChunkProcessor:
         """
         self.logger.warning("Using legacy chunk_by_functions method - consider using process_file instead")
         
-        # Use Python chunker with semantic-first strategy
         chunker = ChunkerFactory.get_chunker(
             file_extension='py',
             max_tokens=self.max_tokens,
@@ -104,7 +95,6 @@ class ChunkProcessor:
         """
         self.logger.warning("Using legacy chunk_by_size method - consider using process_file instead")
         
-        # Use any chunker with size-first strategy
         chunker = ChunkerFactory.get_chunker(
             file_extension=file_metadata.file_type,
             max_tokens=self.max_tokens,
@@ -113,10 +103,6 @@ class ChunkProcessor:
         )
         
         return chunker.chunk_content(content, file_metadata)
-    
-    # ============================================================================
-    # NEW ADVANCED METHODS
-    # ============================================================================
     
     def set_chunking_strategy(self, strategy: ChunkingStrategy):
         """Change the chunking strategy"""
@@ -138,7 +124,6 @@ class ChunkProcessor:
         if not content:
             return []
         
-        # Get chunker with specific strategy
         chunker = ChunkerFactory.get_chunker(
             file_extension=file_metadata.file_type,
             max_tokens=self.max_tokens,

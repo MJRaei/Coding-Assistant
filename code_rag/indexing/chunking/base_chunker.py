@@ -34,9 +34,9 @@ class CodeBoundary:
                  indent_level: int = 0):
         self.line_number = line_number
         self.boundary_type = boundary_type
-        self.content = content  # The actual line content
-        self.name = name  # Function/class name
-        self.parent = parent  # Parent class for methods
+        self.content = content
+        self.name = name
+        self.parent = parent
         self.indent_level = indent_level
         self.child_boundaries: List['CodeBoundary'] = []
         
@@ -51,11 +51,11 @@ class CodeBoundary:
 
 class ChunkingStrategy(Enum):
     """Different chunking strategies"""
-    SEMANTIC_FIRST = "semantic_first"  # Preserve code structure, split only when necessary
-    SIZE_FIRST = "size_first"          # Current behavior - split by size first
-    HIERARCHICAL = "hierarchical"      # Create hierarchy-aware chunks
-    BALANCED = "balanced"              # Balance between semantic and size considerations
-    FUNCTION_AWARE = "function_aware"  # Split intelligently within functions while preserving relationships
+    SEMANTIC_FIRST = "semantic_first"
+    SIZE_FIRST = "size_first"
+    HIERARCHICAL = "hierarchical"
+    BALANCED = "balanced"
+    FUNCTION_AWARE = "function_aware"
 
 
 class BaseLanguageChunker(ABC):
@@ -80,13 +80,12 @@ class BaseLanguageChunker(ABC):
     
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for this language (can be overridden)"""
-        # Default estimation: 1 token ≈ 4 characters
         return len(text) // 4
     
     def is_semantic_unit_complete(self, boundaries: List[CodeBoundary], 
                                  start_idx: int, end_idx: int) -> bool:
         """Check if a range of boundaries forms a complete semantic unit (can be overridden)"""
-        return True  # Default: assume any range is complete
+        return True
     
     def build_hierarchy(self, boundaries: List[CodeBoundary]) -> List[CodeBoundary]:
         """Build a hierarchy of code boundaries (e.g., methods under classes)"""
@@ -94,18 +93,14 @@ class BaseLanguageChunker(ABC):
         parent_stack = []
         
         for boundary in boundaries:
-            # Pop parents that are at same or higher indent level
             while parent_stack and parent_stack[-1].indent_level >= boundary.indent_level:
                 parent_stack.pop()
             
             if parent_stack:
-                # This boundary is a child of the current parent
                 parent_stack[-1].add_child(boundary)
             else:
-                # This is a root-level boundary
                 root_boundaries.append(boundary)
             
-            # If this boundary can have children, add it to the stack
             if boundary.boundary_type in [BoundaryType.CLASS, BoundaryType.FUNCTION]:
                 parent_stack.append(boundary)
                 
@@ -131,17 +126,14 @@ class BaseLanguageChunker(ABC):
             line = lines[i]
             line_tokens = self.estimate_tokens(line)
             
-            # Check if we're at a semantic boundary
             boundary_at_line = self._find_boundary_at_line(boundaries, i)
             
-            # Decide whether to start a new chunk
             should_split = self._should_split_here(
                 current_tokens, line_tokens, boundary_at_line, 
                 current_chunk_lines, i, lines
             )
             
             if should_split and current_chunk_lines:
-                # Create chunk from current content
                 chunk_content = '\n'.join(current_chunk_lines)
                 chunks.append(CodeChunk(
                     content=chunk_content,
@@ -153,7 +145,6 @@ class BaseLanguageChunker(ABC):
                     tokens_count=current_tokens
                 ))
                 
-                # Start new chunk
                 current_chunk_lines = [line]
                 current_tokens = line_tokens
                 start_line = i + 1
@@ -164,7 +155,6 @@ class BaseLanguageChunker(ABC):
             
             i += 1
         
-        # Add final chunk
         if current_chunk_lines:
             chunk_content = '\n'.join(current_chunk_lines)
             chunks.append(CodeChunk(
@@ -203,7 +193,6 @@ class BaseLanguageChunker(ABC):
                     tokens_count=current_tokens
                 ))
                 
-                # Handle overlap
                 overlap_lines = self._calculate_overlap(current_chunk)
                 current_chunk = overlap_lines + [line]
                 current_tokens = sum(self.estimate_tokens(l) for l in current_chunk)
@@ -212,7 +201,6 @@ class BaseLanguageChunker(ABC):
                 current_chunk.append(line)
                 current_tokens += line_tokens
         
-        # Add final chunk
         if current_chunk:
             chunk_content = '\n'.join(current_chunk)
             chunks.append(CodeChunk(
@@ -231,9 +219,7 @@ class BaseLanguageChunker(ABC):
         """Main entry point for chunking content"""
         estimated_tokens = self.estimate_tokens(content)
         
-        # Choose chunking strategy based on strategy and file size
         if self.strategy == ChunkingStrategy.SIZE_FIRST:
-            # For size-first, still respect the original behavior for small files
             if estimated_tokens <= self.max_tokens:
                 return [CodeChunk(
                     content=content,
@@ -260,17 +246,14 @@ class BaseLanguageChunker(ABC):
     
     def chunk_by_hierarchy(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Create hierarchy-aware chunks (default implementation)"""
-        # Default implementation - subclasses should override
         return self.chunk_by_semantic_units(content, file_metadata)
     
     def chunk_balanced(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Balance semantic and size considerations (default implementation)"""
-        # Default implementation - subclasses should override
         return self.chunk_by_semantic_units(content, file_metadata)
     
     def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Function-aware chunking with intelligent splitting (default implementation)"""
-        # Default implementation - subclasses should override with language-specific logic
         return self.chunk_by_semantic_units(content, file_metadata)
     
     def _find_boundary_at_line(self, boundaries: List[CodeBoundary], line_num: int) -> Optional[CodeBoundary]:
@@ -287,18 +270,14 @@ class BaseLanguageChunker(ABC):
         if self.strategy == ChunkingStrategy.SIZE_FIRST:
             return current_tokens + line_tokens > self.max_tokens
         
-        # For semantic-first strategy
         if not boundary:
-            # Only split on size if no semantic boundary
-            return current_tokens + line_tokens > self.max_tokens * 1.2  # Allow some overflow for semantics
+            return current_tokens + line_tokens > self.max_tokens * 1.2
         
-        # We're at a semantic boundary - should we split?
         if current_tokens + line_tokens > self.max_tokens:
-            return True  # Must split due to size
+            return True
         
-        # Split at major boundaries even if under size limit
         if boundary.boundary_type in [BoundaryType.CLASS, BoundaryType.FUNCTION]:
-            return len(current_lines) > 0  # Don't split if this is the first line
+            return len(current_lines) > 0
         
         return False
     

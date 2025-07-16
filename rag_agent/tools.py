@@ -3,7 +3,6 @@
 import os
 import sys
 
-# Add the parent directory to the path to import from code_rag
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from code_rag.retrieval.answer_generator import AnswerGenerator

@@ -18,12 +18,12 @@ from ...models import FileMetadata, CodeChunk
 class JSCodeElement:
     """Represents a JavaScript code element with its context"""
     name: str
-    type: str  # 'function', 'class', 'method', 'object', 'module', 'variable'
+    type: str
     start_line: int
     end_line: int
     indent_level: int
     parent: Optional[str] = None
-    function_type: Optional[str] = None  # 'regular', 'arrow', 'async', 'generator'
+    function_type: Optional[str] = None
     is_async: bool = False
     is_export: bool = False
     is_default_export: bool = False
@@ -40,25 +40,16 @@ class JSChunker(BaseLanguageChunker):
                  strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
         super().__init__(max_tokens, overlap_tokens, strategy)
         
-        # JavaScript-specific patterns
         self.function_patterns = {
-            # Regular function declarations
             'function_decl': re.compile(r'^\s*(export\s+)?(default\s+)?(async\s+)?function\s*\*?\s*(\w+)\s*\(([^)]*)\)\s*{?'),
-            # Arrow functions
             'arrow_func': re.compile(r'^\s*(export\s+)?(const|let|var)\s+(\w+)\s*=\s*(async\s+)?\(([^)]*)\)\s*=>\s*{?'),
-            # Method definitions in objects/classes
             'method_def': re.compile(r'^\s*(async\s+)?(\w+)\s*\(([^)]*)\)\s*{'),
-            # Object method shorthand
             'object_method': re.compile(r'^\s*(\w+):\s*(async\s+)?function\s*\*?\s*\(([^)]*)\)\s*{'),
-            # IIFE
             'iife': re.compile(r'^\s*\(function\s*\(([^)]*)\)\s*{'),
-            # Constructor function
             'constructor': re.compile(r'^\s*function\s+([A-Z]\w*)\s*\(([^)]*)\)\s*{'),
-            # Generator function
             'generator': re.compile(r'^\s*(export\s+)?(async\s+)?function\s*\*\s*(\w+)\s*\(([^)]*)\)\s*{')
         }
         
-        # Class patterns
         self.class_patterns = {
             'class_decl': re.compile(r'^\s*(export\s+)?(default\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?\s*{'),
             'constructor_method': re.compile(r'^\s*constructor\s*\(([^)]*)\)\s*{'),
@@ -67,7 +58,6 @@ class JSChunker(BaseLanguageChunker):
             'setter': re.compile(r'^\s*set\s+(\w+)\s*\(([^)]*)\)\s*{')
         }
         
-        # Import/Export patterns
         self.import_patterns = {
             'es6_import': re.compile(r'^\s*import\s+(.+?)\s+from\s+[\'"]([^\'"]+)[\'"]'),
             'es6_import_default': re.compile(r'^\s*import\s+(\w+)\s+from\s+[\'"]([^\'"]+)[\'"]'),
@@ -77,14 +67,12 @@ class JSChunker(BaseLanguageChunker):
             'commonjs_exports': re.compile(r'^\s*(module\.exports|exports)(\.\w+)?\s*=')
         }
         
-        # Variable patterns
         self.variable_patterns = {
             'var_decl': re.compile(r'^\s*(const|let|var)\s+(\w+)\s*=\s*(.+)'),
             'object_literal': re.compile(r'^\s*(const|let|var)\s+(\w+)\s*=\s*\{'),
             'array_literal': re.compile(r'^\s*(const|let|var)\s+(\w+)\s*=\s*\[')
         }
         
-        # Comment patterns
         self.comment_patterns = {
             'single_line': re.compile(r'^\s*//(.*)'),
             'multi_line_start': re.compile(r'^\s*/\*'),
@@ -92,7 +80,6 @@ class JSChunker(BaseLanguageChunker):
             'jsdoc': re.compile(r'^\s*/\*\*')
         }
         
-        # Common JavaScript keywords and built-ins
         self.js_keywords = {
             'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger',
             'default', 'delete', 'do', 'else', 'export', 'extends', 'finally',
@@ -101,7 +88,6 @@ class JSChunker(BaseLanguageChunker):
             'void', 'while', 'with', 'yield', 'async', 'await', 'of'
         }
         
-        # Framework-specific patterns (React, Vue, etc.)
         self.framework_patterns = {
             'react_component': re.compile(r'^\s*(export\s+)?(default\s+)?(?:function|const)\s+(\w+)\s*=?\s*\(.*\)\s*=>\s*{?'),
             'react_hook': re.compile(r'^\s*(const|let)\s+\[(\w+),\s*set\w+\]\s*=\s*useState'),
@@ -116,11 +102,8 @@ class JSChunker(BaseLanguageChunker):
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate tokens for JavaScript code"""
-        # JavaScript tends to be more verbose than Python
-        # Account for longer identifiers, callbacks, and nested structures
-        base_tokens = len(text) // 3.5  # Slightly more dense than Python
+        base_tokens = len(text) // 3.5
         
-        # Add penalty for nested structures common in JS
         brace_depth = 0
         max_depth = 0
         for char in text:
@@ -130,7 +113,6 @@ class JSChunker(BaseLanguageChunker):
             elif char == '}':
                 brace_depth -= 1
         
-        # Add complexity penalty for deep nesting
         complexity_penalty = max_depth * 10
         
         return int(base_tokens + complexity_penalty)
@@ -145,7 +127,6 @@ class JSChunker(BaseLanguageChunker):
         for i, line in enumerate(lines):
             stripped = line.strip()
             
-            # Handle multiline comments
             if in_multiline_comment:
                 if self.comment_patterns['multi_line_end'].match(stripped):
                     in_multiline_comment = False
@@ -154,16 +135,13 @@ class JSChunker(BaseLanguageChunker):
             if not stripped:
                 continue
             
-            # Check for multiline comment start
             if self.comment_patterns['multi_line_start'].match(stripped):
                 in_multiline_comment = True
                 continue
             
-            # Skip single-line comments
             if self.comment_patterns['single_line'].match(stripped):
                 continue
             
-            # Check for imports/exports
             for pattern_name, pattern in self.import_patterns.items():
                 match = pattern.match(line)
                 if match:
@@ -177,7 +155,6 @@ class JSChunker(BaseLanguageChunker):
                     ))
                     break
             
-            # Check for class declarations
             class_match = self.class_patterns['class_decl'].match(line)
             if class_match:
                 class_name = class_match.group(3)
@@ -195,7 +172,6 @@ class JSChunker(BaseLanguageChunker):
                     current_context = class_name
                 continue
             
-            # Check for function declarations
             for pattern_name, pattern in self.function_patterns.items():
                 match = pattern.match(line)
                 if match:
@@ -211,7 +187,6 @@ class JSChunker(BaseLanguageChunker):
                         ))
                         break
             
-            # Check for method definitions in classes
             for pattern_name, pattern in self.class_patterns.items():
                 if pattern_name == 'class_decl':
                     continue
@@ -230,7 +205,6 @@ class JSChunker(BaseLanguageChunker):
                         ))
                         break
             
-            # Check for variable declarations (objects, arrays)
             for pattern_name, pattern in self.variable_patterns.items():
                 match = pattern.match(line)
                 if match:
@@ -245,7 +219,6 @@ class JSChunker(BaseLanguageChunker):
                     ))
                     break
             
-            # Handle closing braces
             if '}' in line and brace_stack:
                 close_count = line.count('}')
                 for _ in range(min(close_count, len(brace_stack))):
@@ -258,7 +231,6 @@ class JSChunker(BaseLanguageChunker):
         if pattern_name == 'es6_import_default':
             return match.group(1)
         elif pattern_name == 'es6_import_named':
-            # Get first named import
             imports = match.group(1).split(',')
             return imports[0].strip()
         elif pattern_name == 'commonjs_require':
@@ -331,7 +303,6 @@ class JSChunker(BaseLanguageChunker):
         if not boundaries:
             return self.chunk_by_size(content, file_metadata)
         
-        # Check if file is small enough to keep as single chunk
         total_tokens = self.estimate_tokens(content)
         if total_tokens <= self.max_tokens:
             return self._create_single_file_chunk(content, file_metadata, boundaries)
@@ -344,7 +315,6 @@ class JSChunker(BaseLanguageChunker):
                 element, lines, file_metadata, len(chunks)
             )
             
-            # Track relationships
             if len(element_chunks) > 1:
                 chunk_indices = [chunk.chunk_index for chunk in element_chunks]
                 for chunk in element_chunks:
@@ -356,7 +326,6 @@ class JSChunker(BaseLanguageChunker):
 
     def _create_single_file_chunk(self, content: str, file_metadata: FileMetadata, boundaries: List[CodeBoundary]) -> List[CodeChunk]:
         """Create a single chunk for small JS files with complete metadata"""
-        # Extract metadata from boundaries with deduplication
         imports = set()
         exports = set()
         functions = []
@@ -371,7 +340,6 @@ class JSChunker(BaseLanguageChunker):
                 classes.append(boundary.name)
             elif boundary.boundary_type == BoundaryType.FUNCTION:
                 functions.append(boundary.name)
-                # Check if it's an async function
                 if 'async' in boundary.content:
                     async_functions.append(boundary.name)
             elif boundary.boundary_type == BoundaryType.METHOD:
@@ -384,10 +352,8 @@ class JSChunker(BaseLanguageChunker):
         imports_list = sorted(list(imports))
         exports_list = sorted(list(exports))
         
-        # Detect module type
         module_type = "ES6" if any('import' in line or 'export' in line for line in content.splitlines()) else "CommonJS"
         
-        # Detect framework
         framework_type = self._detect_framework(content)
         
         return [CodeChunk(
@@ -416,23 +382,18 @@ class JSChunker(BaseLanguageChunker):
         """Detect JavaScript framework being used"""
         content_lower = content.lower()
         
-        # React detection
         if 'react' in content_lower or 'jsx' in content_lower or 'usestate' in content_lower:
             return 'React'
         
-        # Vue detection
         if 'vue' in content_lower or 'v-' in content_lower:
             return 'Vue'
         
-        # Angular detection
         if 'angular' in content_lower or '@component' in content_lower:
             return 'Angular'
         
-        # jQuery detection
         if '$(' in content or 'jquery' in content_lower:
             return 'jQuery'
         
-        # Node.js detection
         if 'require(' in content or 'module.exports' in content:
             return 'Node.js'
         
@@ -442,7 +403,6 @@ class JSChunker(BaseLanguageChunker):
         """Extract structured JavaScript elements from boundaries"""
         elements = []
         
-        # Group boundaries by type and analyze structure
         classes = []
         functions = []
         
@@ -472,11 +432,8 @@ class JSChunker(BaseLanguageChunker):
                 )
                 functions.append(element)
         
-        # For JavaScript, include all significant elements
-        # Classes and standalone functions
         elements.extend(classes)
         
-        # Include substantial standalone functions
         substantial_functions = [f for f in functions if f.indent_level == 0]
         elements.extend(substantial_functions)
         
@@ -503,7 +460,6 @@ class JSChunker(BaseLanguageChunker):
         element_content = '\n'.join(element_lines)
         element_tokens = self.estimate_tokens(element_content)
         
-        # If element fits within limit, return as single chunk
         if element_tokens <= self.max_tokens:
             return [CodeChunk(
                 content=element_content,
@@ -526,7 +482,6 @@ class JSChunker(BaseLanguageChunker):
                 }
             )]
         
-        # Element is too large, split it intelligently
         return self._split_large_js_element(element, lines, file_metadata, base_index)
 
     def _split_large_js_element(self, element: JSCodeElement, lines: List[str], 
@@ -535,7 +490,6 @@ class JSChunker(BaseLanguageChunker):
         chunks = []
         element_lines = lines[element.start_line - 1:element.end_line]
         
-        # Calculate target chunk size for balanced splitting
         total_tokens = self.estimate_tokens('\n'.join(element_lines))
         num_chunks = (total_tokens + self.max_tokens - 1) // self.max_tokens
         target_chunk_size = total_tokens // num_chunks
@@ -548,16 +502,13 @@ class JSChunker(BaseLanguageChunker):
         for i, line in enumerate(element_lines):
             line_tokens = self.estimate_tokens(line)
             
-            # Track brace levels for safe splitting
             brace_level += line.count('{') - line.count('}')
             
-            # Check if we should split
             should_split = (current_tokens + line_tokens > target_chunk_size and 
                           current_lines and 
-                          brace_level == 0)  # Only split at brace level 0
+                          brace_level == 0)
             
             if should_split:
-                # Create chunk
                 chunk_content = '\n'.join(current_lines)
                 chunk_start_line = element.start_line + start_line_idx
                 chunk_end_line = element.start_line + start_line_idx + len(current_lines) - 1
@@ -584,7 +535,6 @@ class JSChunker(BaseLanguageChunker):
                     }
                 ))
                 
-                # Start new chunk
                 current_lines = [line]
                 current_tokens = line_tokens
                 start_line_idx = i
@@ -592,7 +542,6 @@ class JSChunker(BaseLanguageChunker):
                 current_lines.append(line)
                 current_tokens += line_tokens
         
-        # Add final chunk
         if current_lines:
             chunk_content = '\n'.join(current_lines)
             chunk_start_line = element.start_line + start_line_idx

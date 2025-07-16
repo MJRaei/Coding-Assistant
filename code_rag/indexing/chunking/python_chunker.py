@@ -15,7 +15,7 @@ from ...models import FileMetadata, CodeChunk
 class PythonCodeElement:
     """Represents a Python code element with its context"""
     name: str
-    type: str  # 'class', 'function', 'method', 'property'
+    type: str
     start_line: int
     end_line: int
     indent_level: int
@@ -35,7 +35,6 @@ class PythonChunker(BaseLanguageChunker):
                  strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
         super().__init__(max_tokens, overlap_tokens, strategy)
         
-        # Python-specific patterns
         self.class_pattern = re.compile(r'^(\s*)class\s+([A-Za-z_][A-Za-z0-9_]*)\s*[\(:]')
         self.function_pattern = re.compile(r'^(\s*)(async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(')
         self.decorator_pattern = re.compile(r'^(\s*)@([A-Za-z_][A-Za-z0-9_.]*)')
@@ -46,34 +45,28 @@ class PythonChunker(BaseLanguageChunker):
     
     def estimate_tokens(self, text: str) -> int:
         """Python-specific token estimation"""
-        # Python code tends to be more compact than average
         char_count = len(text)
         
-        # More accurate estimation for Python:
         lines = text.splitlines()
         effective_chars = 0
         
         for line in lines:
             stripped = line.strip()
             if not stripped or stripped.startswith('#'):
-                continue  # Skip empty lines and comments
+                continue
             
-            # Count only non-whitespace characters for token estimation
             effective_chars += len(stripped)
         
-        # Python: roughly 1 token per 3.5 characters (more dense than average)
         return max(1, int(effective_chars / 3.5))
     
     def detect_boundaries(self, content: str, lines: List[str]) -> List[CodeBoundary]:
         """Detect Python-specific code boundaries using AST when possible"""
         boundaries = []
         
-        # Try to use AST for more accurate parsing
         try:
             tree = ast.parse(content)
             boundaries = self._extract_boundaries_from_ast(tree, lines)
         except SyntaxError:
-            # Fallback to regex-based detection for incomplete/malformed code
             self.logger.warning("Failed to parse with AST, falling back to regex")
             boundaries = self._extract_boundaries_with_regex(lines)
         
@@ -86,14 +79,13 @@ class PythonChunker(BaseLanguageChunker):
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 boundaries.append(CodeBoundary(
-                    line_number=node.lineno - 1,  # Convert to 0-based
+                    line_number=node.lineno - 1,
                     boundary_type=BoundaryType.CLASS,
                     content=lines[node.lineno - 1] if node.lineno <= len(lines) else "",
                     name=node.name,
                     indent_level=self._get_indent_level(lines[node.lineno - 1]) if node.lineno <= len(lines) else 0
                 ))
                 
-                # Add methods within the class
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef):
                         is_property = any(
@@ -111,7 +103,6 @@ class PythonChunker(BaseLanguageChunker):
                         ))
             
             elif isinstance(node, ast.FunctionDef) and not self._is_method(node, tree):
-                # Top-level function
                 boundaries.append(CodeBoundary(
                     line_number=node.lineno - 1,
                     boundary_type=BoundaryType.FUNCTION,
@@ -137,11 +128,9 @@ class PythonChunker(BaseLanguageChunker):
         for i, line in enumerate(lines):
             stripped = line.strip()
             
-            # Skip empty lines and comments
             if not stripped or stripped.startswith('#'):
                 continue
             
-            # Check for class definition
             class_match = self.class_pattern.match(line)
             if class_match:
                 boundaries.append(CodeBoundary(
@@ -153,14 +142,12 @@ class PythonChunker(BaseLanguageChunker):
                 ))
                 continue
             
-            # Check for function/method definition
             func_match = self.function_pattern.match(line)
             if func_match:
                 is_async = func_match.group(2) is not None
                 function_name = func_match.group(3)
                 indent = len(func_match.group(1))
                 
-                # Check if it's a method (indented) or function (top-level)
                 boundary_type = BoundaryType.METHOD if indent > 0 else BoundaryType.FUNCTION
                 
                 boundaries.append(CodeBoundary(
@@ -172,7 +159,6 @@ class PythonChunker(BaseLanguageChunker):
                 ))
                 continue
             
-            # Check for decorators
             decorator_match = self.decorator_pattern.match(line)
             if decorator_match:
                 boundaries.append(CodeBoundary(
@@ -184,7 +170,6 @@ class PythonChunker(BaseLanguageChunker):
                 ))
                 continue
             
-            # Check for imports
             import_match = self.import_pattern.match(line)
             if import_match:
                 boundaries.append(CodeBoundary(
@@ -202,14 +187,11 @@ class PythonChunker(BaseLanguageChunker):
         if start_idx >= end_idx:
             return False
         
-        # Check if we're cutting in the middle of a class
         for i in range(start_idx, end_idx):
             if boundaries[i].boundary_type == BoundaryType.CLASS:
-                # Make sure all methods of this class are included
                 class_name = boundaries[i].name
                 for j in range(i + 1, len(boundaries)):
                     if j >= end_idx:
-                        # Found a method that belongs to this class but is outside our range
                         if (boundaries[j].boundary_type == BoundaryType.METHOD and 
                             boundaries[j].parent == class_name):
                             return False
@@ -237,7 +219,6 @@ class PythonChunker(BaseLanguageChunker):
             chunk_content = '\n'.join(lines[start_line:end_line + 1])
             tokens = self.estimate_tokens(chunk_content)
             
-            # If this group is too large, split it further
             if tokens > self.max_tokens:
                 sub_chunks = self._split_large_group(element_group, lines, file_metadata)
                 chunks.extend(sub_chunks)
@@ -247,7 +228,7 @@ class PythonChunker(BaseLanguageChunker):
                     file_metadata=file_metadata,
                     chunk_index=len(chunks),
                     chunk_type=element_group[0]['type'],
-                    start_line=start_line + 1,  # Convert back to 1-based
+                    start_line=start_line + 1,
                     end_line=end_line + 1,
                     tokens_count=tokens
                 ))
@@ -256,7 +237,6 @@ class PythonChunker(BaseLanguageChunker):
     
     def chunk_balanced(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Balance semantic preservation with size constraints"""
-        # Start with semantic chunking but be more aggressive about splitting large units
         return self.chunk_by_semantic_units(content, file_metadata)
     
     def _is_method(self, node: ast.FunctionDef, tree: ast.AST) -> bool:
@@ -279,7 +259,6 @@ class PythonChunker(BaseLanguageChunker):
         
         for i, boundary in enumerate(boundaries):
             if boundary.boundary_type == BoundaryType.CLASS:
-                # Start new group for class
                 if current_group:
                     groups.append(current_group)
                 
@@ -292,7 +271,6 @@ class PythonChunker(BaseLanguageChunker):
                 }]
             
             elif boundary.boundary_type == BoundaryType.METHOD and boundary.parent == current_class:
-                # Add method to current class group
                 current_group.append({
                     'type': 'method',
                     'name': boundary.name,
@@ -301,7 +279,6 @@ class PythonChunker(BaseLanguageChunker):
                 })
             
             elif boundary.boundary_type == BoundaryType.FUNCTION:
-                # Standalone function - its own group
                 if current_group:
                     groups.append(current_group)
                 
@@ -326,18 +303,17 @@ class PythonChunker(BaseLanguageChunker):
             if next_boundary.indent_level <= boundary.indent_level:
                 return next_boundary.line_number - 1
         
-        # Find end by looking for next element at same or lower indentation
         start_line = boundary.line_number + 1
         target_indent = boundary.indent_level
         
         for i in range(start_line, len(lines)):
             line = lines[i]
-            if line.strip():  # Non-empty line
+            if line.strip():
                 current_indent = self._get_indent_level(line)
                 if current_indent <= target_indent:
                     return i - 1
         
-        return len(lines) - 1  # End of file
+        return len(lines) - 1
     
     def _split_large_group(self, element_group: List[Dict], lines: List[str], 
                           file_metadata: FileMetadata) -> List[CodeChunk]:
@@ -370,7 +346,6 @@ class PythonChunker(BaseLanguageChunker):
         if not boundaries:
             return self.chunk_by_size(content, file_metadata)
         
-        # Build hierarchy and analyze structure
         hierarchy = self.build_hierarchy(boundaries)
         elements = self._extract_code_elements(content, lines, boundaries)
         
@@ -382,7 +357,6 @@ class PythonChunker(BaseLanguageChunker):
                 element, lines, file_metadata, len(chunks)
             )
             
-            # Track relationships
             if len(element_chunks) > 1:
                 chunk_indices = [chunk.chunk_index for chunk in element_chunks]
                 for chunk in element_chunks:
@@ -419,14 +393,11 @@ class PythonChunker(BaseLanguageChunker):
                     decorators=[self._get_decorator_name(dec) for dec in node.decorator_list]
                 )
                 
-                # Estimate tokens for the entire class
                 class_lines = lines[class_element.start_line - 1:class_element.end_line]
                 class_content = '\n'.join(class_lines)
                 class_tokens = self.estimate_tokens(class_content)
                 
-                # Only extract methods separately if class is too large
                 if class_tokens > self.max_tokens:
-                    # Class is too large, extract methods separately for intelligent splitting
                     for item in node.body:
                         if isinstance(item, ast.FunctionDef):
                             method_element = PythonCodeElement(
@@ -445,7 +416,6 @@ class PythonChunker(BaseLanguageChunker):
                             )
                             elements.append(method_element)
                 else:
-                    # Class fits within limit, keep as single element
                     elements.append(class_element)
             
             elif isinstance(node, ast.FunctionDef) and not self._is_method(node, tree):
@@ -487,7 +457,6 @@ class PythonChunker(BaseLanguageChunker):
         element_content = '\n'.join(element_lines)
         element_tokens = self.estimate_tokens(element_content)
         
-        # If element fits within limit, return as single chunk
         if element_tokens <= self.max_tokens:
             return [CodeChunk(
                 content=element_content,
@@ -509,7 +478,6 @@ class PythonChunker(BaseLanguageChunker):
                 }
             )]
         
-        # Element is too large, need to split intelligently
         if element.type == 'class':
             return self._split_large_class(element, lines, file_metadata, base_index)
         elif element.type in ['function', 'method']:
@@ -523,25 +491,20 @@ class PythonChunker(BaseLanguageChunker):
         chunks = []
         class_lines = lines[element.start_line - 1:element.end_line]
         
-        # Find class declaration and any class-level code
         class_header_end = self._find_class_header_end(class_lines)
         class_header = class_lines[:class_header_end]
         
-        # Find method boundaries within the class
         method_boundaries = self._find_method_boundaries_in_class(class_lines, element.start_line)
         
         if not method_boundaries:
-            # No methods found, split by size
             return self._split_by_size_with_metadata(element, lines, file_metadata, base_index)
         
-        # Create chunks for each method, including class context
         current_chunk_index = base_index
         
         for i, method_boundary in enumerate(method_boundaries):
             method_start = method_boundary['start'] - element.start_line + 1
             method_end = method_boundary['end'] - element.start_line + 1
             
-            # Include class header with first method
             if i == 0:
                 chunk_lines = class_header + class_lines[method_start:method_end]
                 chunk_start_line = element.start_line
@@ -552,7 +515,6 @@ class PythonChunker(BaseLanguageChunker):
             chunk_content = '\n'.join(chunk_lines)
             chunk_tokens = self.estimate_tokens(chunk_content)
             
-            # If method is still too large, split it further
             if chunk_tokens > self.max_tokens:
                 method_element = PythonCodeElement(
                     name=method_boundary['name'],
@@ -638,27 +600,23 @@ class PythonChunker(BaseLanguageChunker):
         """Find safe places to split within a function"""
         breakpoints = []
         
-        for i, line in enumerate(function_lines[1:], 1):  # Skip function definition
+        for i, line in enumerate(function_lines[1:], 1):
             stripped = line.strip()
             
-            # Skip empty lines and comments
             if not stripped or stripped.startswith('#'):
                 continue
             
-            # Look for safe breakpoints
             if (stripped.startswith(('if ', 'elif ', 'else:', 'for ', 'while ', 'try:', 'except', 'finally:', 'with ')) or
                 stripped.startswith(('return ', 'yield ', 'raise ')) or
                 ('=' in stripped and not stripped.startswith('def ')) or
                 stripped.endswith(':') or
-                (i > 0 and not function_lines[i-1].strip())):  # After blank line
+                (i > 0 and not function_lines[i-1].strip())):
                 
-                # Check if this creates a reasonable chunk size
-                if i > 10:  # Minimum lines per chunk
+                if i > 10:
                     breakpoints.append(i)
         
-        # Ensure we don't create too many tiny chunks
         if len(breakpoints) > 5:
-            breakpoints = breakpoints[::2]  # Take every other breakpoint
+            breakpoints = breakpoints[::2]
         
         return breakpoints
     
@@ -666,11 +624,9 @@ class PythonChunker(BaseLanguageChunker):
         """Find where class header ends (after class def and docstring)"""
         header_end = 1
         
-        # Look for docstring
         for i, line in enumerate(class_lines[1:], 1):
             stripped = line.strip()
             if stripped.startswith('"""') or stripped.startswith("'''"):
-                # Find end of docstring
                 quote_type = '"""' if stripped.startswith('"""') else "'''"
                 if stripped.count(quote_type) >= 2:
                     header_end = i + 1
@@ -698,7 +654,6 @@ class PythonChunker(BaseLanguageChunker):
                     method_name = match.group(3)
                     method_start = class_start_line + i
                     
-                    # Find method end
                     method_end = self._find_method_end(class_lines, i)
                     
                     methods.append({
@@ -722,7 +677,6 @@ class PythonChunker(BaseLanguageChunker):
                 
             line_indent = len(line) - len(line.lstrip())
             
-            # If we find a line with same or less indentation, method ended
             if line_indent <= method_indent:
                 return i - 1
         
@@ -803,11 +757,9 @@ class PythonChunker(BaseLanguageChunker):
         if hasattr(node, 'end_lineno') and node.end_lineno:
             return node.end_lineno
         
-        # Fallback: estimate based on node type and content
         if hasattr(node, 'lineno'):
             start_line = node.lineno
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                # Look for next definition at same or higher level
                 for i in range(start_line, len(lines)):
                     line = lines[i]
                     if line.strip() and not line.startswith(' ') and not line.startswith('\t'):

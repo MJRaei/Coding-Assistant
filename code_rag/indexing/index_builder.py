@@ -26,7 +26,6 @@ class IndexBuilder:
             embedding_model: OpenAI embedding model to use (uses config default if None)
             chunking_strategy: Chunking strategy to use for processing files
         """
-        # Handle both new and legacy parameter formats
         if project_directory:
             self.root_path = project_directory
         elif root_path:
@@ -76,7 +75,6 @@ class IndexBuilder:
         
         self.logger.info("RAG index building completed!")
         
-        # Optionally save to data directory
         index_path = None
         if save_to_data_dir and self.data_directory:
             import os

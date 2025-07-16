@@ -14,7 +14,6 @@ from .js_chunker import JSChunker
 class ChunkerFactory:
     """Factory for creating language-specific chunkers"""
     
-    # Registry of available chunkers
     _chunkers: Dict[str, Type[BaseLanguageChunker]] = {
         'py': PythonChunker,
         'pyx': PythonChunker,
@@ -39,14 +38,12 @@ class ChunkerFactory:
                    strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST) -> BaseLanguageChunker:
         """Get appropriate chunker for file extension"""
         
-        # Remove leading dot if present
         ext = file_extension.lstrip('.')
         
         chunker_class = cls._chunkers.get(ext)
         if chunker_class:
             return chunker_class(max_tokens, overlap_tokens, strategy)
         
-        # Fallback to Python chunker as default (most generic)
         logger = logging.getLogger(__name__)
         logger.warning(f"No specific chunker found for '{ext}', using Python chunker as fallback")
         return PythonChunker(max_tokens, overlap_tokens, strategy)
