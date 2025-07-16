@@ -32,7 +32,7 @@ class PythonChunker(BaseLanguageChunker):
     """Python-specific chunker with advanced Python code understanding"""
     
     def __init__(self, max_tokens: int = 2000, overlap_tokens: int = 200, 
-                 strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         super().__init__(max_tokens, overlap_tokens, strategy)
         
         self.class_pattern = re.compile(r'^(\s*)class\s+([A-Za-z_][A-Za-z0-9_]*)\s*[\(:]')
@@ -233,8 +233,8 @@ class PythonChunker(BaseLanguageChunker):
         
         return len(lines) - 1
     
-    def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Function-aware chunking with intelligent splitting within functions"""
+    def chunk_adaptive_structure(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+        """Adaptive structure chunking with intelligent splitting within functions"""
         lines = content.splitlines()
         boundaries = self.detect_boundaries(content, lines)
         
@@ -248,7 +248,7 @@ class PythonChunker(BaseLanguageChunker):
         related_chunks_map = {}
         
         for element in elements:
-            element_chunks = self._chunk_element_function_aware(
+            element_chunks = self._chunk_element_adaptive_structure(
                 element, lines, file_metadata, len(chunks)
             )
             
@@ -345,7 +345,7 @@ class PythonChunker(BaseLanguageChunker):
         
         return sorted(elements, key=lambda e: e.start_line)
     
-    def _chunk_element_function_aware(self, element: PythonCodeElement, lines: List[str], 
+    def _chunk_element_adaptive_structure(self, element: PythonCodeElement, lines: List[str], 
                                     file_metadata: FileMetadata, base_index: int) -> List[CodeChunk]:
         """Chunk a single code element with function-aware logic"""
         element_lines = lines[element.start_line - 1:element.end_line]

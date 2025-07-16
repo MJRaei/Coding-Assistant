@@ -23,7 +23,7 @@ class ChunkProcessor:
     """
     
     def __init__(self, max_tokens: int = None, overlap_tokens: int = None, 
-                 chunking_strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 chunking_strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         """
         Initialize ChunkProcessor with new modular chunking system
         
@@ -83,7 +83,7 @@ class ChunkProcessor:
             file_extension='py',
             max_tokens=self.max_tokens,
             overlap_tokens=self.overlap_tokens,
-            strategy=ChunkingStrategy.SEMANTIC_FIRST
+                            strategy=ChunkingStrategy.STRUCTURE_PRESERVING
         )
         
         return chunker.chunk_content(content, file_metadata)
@@ -99,7 +99,7 @@ class ChunkProcessor:
             file_extension=file_metadata.file_type,
             max_tokens=self.max_tokens,
             overlap_tokens=self.overlap_tokens,
-            strategy=ChunkingStrategy.SIZE_FIRST
+                            strategy=ChunkingStrategy.SIZE_BASED
         )
         
         return chunker.chunk_content(content, file_metadata)
@@ -143,9 +143,9 @@ class ChunkProcessor:
             return {}
         
         strategies = [
-            ChunkingStrategy.SEMANTIC_FIRST,
-            ChunkingStrategy.SIZE_FIRST,
-            ChunkingStrategy.FUNCTION_AWARE
+            ChunkingStrategy.STRUCTURE_PRESERVING,
+            ChunkingStrategy.SIZE_BASED,
+            ChunkingStrategy.ADAPTIVE_STRUCTURE
         ]
         
         analysis = {}

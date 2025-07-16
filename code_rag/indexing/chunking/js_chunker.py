@@ -37,7 +37,7 @@ class JSChunker(BaseLanguageChunker):
     """JavaScript-specific chunker with understanding of JS patterns"""
     
     def __init__(self, max_tokens: int = 2000, overlap_tokens: int = 200, 
-                 strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         super().__init__(max_tokens, overlap_tokens, strategy)
         
         self.function_patterns = {
@@ -295,7 +295,7 @@ class JSChunker(BaseLanguageChunker):
         """Calculate indentation level"""
         return len(line) - len(line.lstrip())
 
-    def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+    def chunk_adaptive_structure(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """JavaScript-aware chunking with intelligent function and class splitting"""
         lines = content.splitlines()
         boundaries = self.detect_boundaries(content, lines)

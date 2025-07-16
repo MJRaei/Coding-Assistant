@@ -3,7 +3,7 @@ Simple example: Chunk and embed a project directory and save to data folder.
 
 This example demonstrates the core functionality:
 1. Takes a project directory as input
-2. Chunks and embeds the code using FUNCTION_AWARE strategy
+2. Chunks and embeds the code using ADAPTIVE_STRUCTURE strategy
 3. Saves the index to the data folder
 
 Modify the project_dir variable to point to your target directory.
@@ -52,13 +52,13 @@ def main():
     # BUILD INDEX
     # =============================================================================
     
-    print("🏗️  Building index with FUNCTION_AWARE chunking strategy...")
+    print("🏗️  Building index with ADAPTIVE_STRUCTURE chunking strategy...")
     
     try:
         builder = IndexBuilder(
             project_directory=str(project_dir),
             data_directory=str(data_dir),
-            chunking_strategy=ChunkingStrategy.FUNCTION_AWARE
+            chunking_strategy=ChunkingStrategy.ADAPTIVE_STRUCTURE
         )
         
         # Build the index

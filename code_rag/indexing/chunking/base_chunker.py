@@ -51,16 +51,16 @@ class CodeBoundary:
 
 class ChunkingStrategy(Enum):
     """Different chunking strategies"""
-    SEMANTIC_FIRST = "semantic_first"
-    SIZE_FIRST = "size_first"
-    FUNCTION_AWARE = "function_aware"
+    STRUCTURE_PRESERVING = "structure_preserving"
+    SIZE_BASED = "size_based"
+    ADAPTIVE_STRUCTURE = "adaptive_structure"
 
 
 class BaseLanguageChunker(ABC):
     """Abstract base class for language-specific chunking"""
     
     def __init__(self, max_tokens: int = 2000, overlap_tokens: int = 200, 
-                 strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         self.max_tokens = max_tokens
         self.overlap_tokens = overlap_tokens
         self.strategy = strategy
@@ -217,7 +217,7 @@ class BaseLanguageChunker(ABC):
         """Main entry point for chunking content"""
         estimated_tokens = self.estimate_tokens(content)
         
-        if self.strategy == ChunkingStrategy.SIZE_FIRST:
+        if self.strategy == ChunkingStrategy.SIZE_BASED:
             if estimated_tokens <= self.max_tokens:
                 return [CodeChunk(
                     content=content,
@@ -230,17 +230,17 @@ class BaseLanguageChunker(ABC):
                 )]
             return self.chunk_by_size(content, file_metadata)
         
-        elif self.strategy == ChunkingStrategy.SEMANTIC_FIRST:
+        elif self.strategy == ChunkingStrategy.STRUCTURE_PRESERVING:
             return self.chunk_by_semantic_units(content, file_metadata)
         
-        elif self.strategy == ChunkingStrategy.FUNCTION_AWARE:
-            return self.chunk_function_aware(content, file_metadata)
+        elif self.strategy == ChunkingStrategy.ADAPTIVE_STRUCTURE:
+            return self.chunk_adaptive_structure(content, file_metadata)
         
         else:
             return self.chunk_by_semantic_units(content, file_metadata)
     
-    def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Function-aware chunking with intelligent splitting (default implementation)"""
+    def chunk_adaptive_structure(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+        """Adaptive structure chunking with intelligent splitting (default implementation)"""
         return self.chunk_by_semantic_units(content, file_metadata)
     
     def _find_boundary_at_line(self, boundaries: List[CodeBoundary], line_num: int) -> Optional[CodeBoundary]:
@@ -254,7 +254,7 @@ class BaseLanguageChunker(ABC):
                           boundary: Optional[CodeBoundary], current_lines: List[str], 
                           line_idx: int, all_lines: List[str]) -> bool:
         """Decide whether to split at this point"""
-        if self.strategy == ChunkingStrategy.SIZE_FIRST:
+        if self.strategy == ChunkingStrategy.SIZE_BASED:
             return current_tokens + line_tokens > self.max_tokens
         
         if not boundary:

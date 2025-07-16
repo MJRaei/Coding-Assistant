@@ -35,7 +35,7 @@ class ChunkerFactory:
     @classmethod
     def get_chunker(cls, file_extension: str, max_tokens: int = 2000, 
                    overlap_tokens: int = 200, 
-                   strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST) -> BaseLanguageChunker:
+                   strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING) -> BaseLanguageChunker:
         """Get appropriate chunker for file extension"""
         
         ext = file_extension.lstrip('.')

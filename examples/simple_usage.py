@@ -35,48 +35,48 @@ def main():
     # 1. Build index using different chunking strategies
     print("\n1. Building index with different chunking strategies...")
     
-    # Try FUNCTION_AWARE strategy first (new!)
-    print("\n--- Testing FUNCTION_AWARE Strategy ---")
+    # Try ADAPTIVE_STRUCTURE strategy first (new!)
+    print("\n--- Testing ADAPTIVE_STRUCTURE Strategy ---")
     builder = IndexBuilder(
         project_directory=str(project_dir),
         data_directory=str(data_dir),
-        chunking_strategy=ChunkingStrategy.FUNCTION_AWARE
+        chunking_strategy=ChunkingStrategy.ADAPTIVE_STRUCTURE
     )
     
     try:
         index_path = builder.build_index()
-        print(f"✓ FUNCTION_AWARE index built successfully: {index_path}")
+        print(f"✓ ADAPTIVE_STRUCTURE index built successfully: {index_path}")
         
         # Inspect all chunks to see the new metadata
-        print("\n--- Inspecting FUNCTION_AWARE chunks ---")
+        print("\n--- Inspecting ADAPTIVE_STRUCTURE chunks ---")
         inspect_chunks(builder)
         
-        # Test search with FUNCTION_AWARE index
-        print("\n--- Testing search with FUNCTION_AWARE index ---")
-        test_search(data_dir, "function_aware")
+        # Test search with ADAPTIVE_STRUCTURE index
+        print("\n--- Testing search with ADAPTIVE_STRUCTURE index ---")
+        test_search(data_dir, "adaptive_structure")
         
     except Exception as e:
-        print(f"✗ Error with FUNCTION_AWARE strategy: {e}")
+        print(f"✗ Error with ADAPTIVE_STRUCTURE strategy: {e}")
         print("This might be due to missing dependencies or configuration issues.")
     
-    # Compare with SEMANTIC_FIRST strategy
-    print("\n--- Testing SEMANTIC_FIRST Strategy (for comparison) ---")
+    # Compare with STRUCTURE_PRESERVING strategy
+    print("\n--- Testing STRUCTURE_PRESERVING Strategy (for comparison) ---")
     builder_semantic = IndexBuilder(
         project_directory=str(project_dir),
         data_directory=str(data_dir),
-        chunking_strategy=ChunkingStrategy.SEMANTIC_FIRST
+        chunking_strategy=ChunkingStrategy.STRUCTURE_PRESERVING
     )
     
     try:
         index_path_semantic = builder_semantic.build_index()
-        print(f"✓ SEMANTIC_FIRST index built successfully: {index_path_semantic}")
+        print(f"✓ STRUCTURE_PRESERVING index built successfully: {index_path_semantic}")
         
-        # Test search with SEMANTIC_FIRST index
-        print("\n--- Testing search with SEMANTIC_FIRST index ---")
-        test_search(data_dir, "semantic_first")
+        # Test search with STRUCTURE_PRESERVING index
+        print("\n--- Testing search with STRUCTURE_PRESERVING index ---")
+        test_search(data_dir, "structure_preserving")
         
     except Exception as e:
-        print(f"✗ Error with SEMANTIC_FIRST strategy: {e}")
+        print(f"✗ Error with STRUCTURE_PRESERVING strategy: {e}")
     
     # 2. Compare chunking strategies
     print("\n2. Comparing chunking strategies...")

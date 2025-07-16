@@ -33,7 +33,7 @@ class QMLChunker(BaseLanguageChunker):
     """QML-specific chunker with advanced QML understanding"""
     
     def __init__(self, max_tokens: int = 2000, overlap_tokens: int = 200, 
-                 strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         super().__init__(max_tokens, overlap_tokens, strategy)
         
         self.import_pattern = re.compile(r'^\s*import\s+(?:[\w\.]+|[\'"][^\'\"]*[\'"])\s*[\d\.]*\s*(?:as\s+\w+)?\s*$')
@@ -229,7 +229,7 @@ class QMLChunker(BaseLanguageChunker):
         
         return True
     
-    def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
+    def chunk_adaptive_structure(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """QML-aware chunking with intelligent component splitting"""
         lines = content.splitlines()
         boundaries = self.detect_boundaries(content, lines)

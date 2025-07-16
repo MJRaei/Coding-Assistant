@@ -14,7 +14,7 @@ class IndexBuilder:
     def __init__(self, project_directory: str = None, data_directory: str = None, 
                  root_path: str = None, openai_api_key: str = None, 
                  embedding_model: str = None, 
-                 chunking_strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC_FIRST):
+                 chunking_strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_PRESERVING):
         """
         Initialize the Index Builder
         

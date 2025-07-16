@@ -66,7 +66,7 @@ class CodeSearch:
                 'metadata': asdict(chunk.file_metadata)
             }
             
-            # Add FUNCTION_AWARE enhanced metadata if available
+            # Add ADAPTIVE_STRUCTURE enhanced metadata if available
             if hasattr(chunk, 'parent_class') and chunk.parent_class:
                 result_dict['parent_class'] = chunk.parent_class
             if hasattr(chunk, 'parent_function') and chunk.parent_function:

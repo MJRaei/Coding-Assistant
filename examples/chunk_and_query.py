@@ -2,7 +2,7 @@
 Simple example: Chunk a codebase and ask questions about it.
 
 This example demonstrates:
-1. Chunking a specific directory with FUNCTION_AWARE strategy
+1. Chunking a specific directory with ADAPTIVE_STRUCTURE strategy
 2. Asking a simple question about the codebase
 3. Getting detailed answers with source information
 
@@ -60,14 +60,14 @@ def main():
     # Create data directory
     DATA_DIR.mkdir(exist_ok=True)
     
-    # Build index with FUNCTION_AWARE strategy (best for code understanding)
-    print("🏗️  Building index with FUNCTION_AWARE chunking strategy...")
+    # Build index with ADAPTIVE_STRUCTURE strategy (best for code understanding)
+    print("🏗️  Building index with ADAPTIVE_STRUCTURE chunking strategy...")
     
     try:
         builder = IndexBuilder(
             project_directory=TARGET_DIRECTORY,
             data_directory=str(DATA_DIR),
-            chunking_strategy=ChunkingStrategy.FUNCTION_AWARE
+            chunking_strategy=ChunkingStrategy.ADAPTIVE_STRUCTURE
         )
         
         # Build the index
