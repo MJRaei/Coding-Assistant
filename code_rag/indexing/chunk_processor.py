@@ -145,8 +145,6 @@ class ChunkProcessor:
         strategies = [
             ChunkingStrategy.SEMANTIC_FIRST,
             ChunkingStrategy.SIZE_FIRST,
-            ChunkingStrategy.HIERARCHICAL,
-            ChunkingStrategy.BALANCED,
             ChunkingStrategy.FUNCTION_AWARE
         ]
         

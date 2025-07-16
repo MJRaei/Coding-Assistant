@@ -197,47 +197,9 @@ class PythonChunker(BaseLanguageChunker):
                             return False
                     if (boundaries[j].boundary_type == BoundaryType.CLASS and 
                         boundaries[j].indent_level <= boundaries[i].indent_level):
-                        break  # End of current class
+                        break
         
         return True
-    
-    def chunk_by_hierarchy(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Create Python-specific hierarchical chunks"""
-        lines = content.splitlines()
-        boundaries = self.detect_boundaries(content, lines)
-        
-        if not boundaries:
-            return self.chunk_by_size(content, file_metadata)
-        
-        chunks = []
-        elements = self._group_related_elements(boundaries, lines)
-        
-        for element_group in elements:
-            start_line = element_group[0]['start_line']
-            end_line = element_group[-1]['end_line']
-            
-            chunk_content = '\n'.join(lines[start_line:end_line + 1])
-            tokens = self.estimate_tokens(chunk_content)
-            
-            if tokens > self.max_tokens:
-                sub_chunks = self._split_large_group(element_group, lines, file_metadata)
-                chunks.extend(sub_chunks)
-            else:
-                chunks.append(CodeChunk(
-                    content=chunk_content,
-                    file_metadata=file_metadata,
-                    chunk_index=len(chunks),
-                    chunk_type=element_group[0]['type'],
-                    start_line=start_line + 1,
-                    end_line=end_line + 1,
-                    tokens_count=tokens
-                ))
-        
-        return chunks
-    
-    def chunk_balanced(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Balance semantic preservation with size constraints"""
-        return self.chunk_by_semantic_units(content, file_metadata)
     
     def _is_method(self, node: ast.FunctionDef, tree: ast.AST) -> bool:
         """Check if a function is a method (inside a class)"""
@@ -250,50 +212,6 @@ class PythonChunker(BaseLanguageChunker):
     def _get_indent_level(self, line: str) -> int:
         """Get the indentation level of a line"""
         return len(line) - len(line.lstrip())
-    
-    def _group_related_elements(self, boundaries: List[CodeBoundary], lines: List[str]) -> List[List[Dict]]:
-        """Group related Python elements together (classes with their methods, etc.)"""
-        groups = []
-        current_group = []
-        current_class = None
-        
-        for i, boundary in enumerate(boundaries):
-            if boundary.boundary_type == BoundaryType.CLASS:
-                if current_group:
-                    groups.append(current_group)
-                
-                current_class = boundary.name
-                current_group = [{
-                    'type': 'class',
-                    'name': boundary.name,
-                    'start_line': boundary.line_number,
-                    'end_line': self._find_element_end_line(boundary, boundaries, i, lines)
-                }]
-            
-            elif boundary.boundary_type == BoundaryType.METHOD and boundary.parent == current_class:
-                current_group.append({
-                    'type': 'method',
-                    'name': boundary.name,
-                    'start_line': boundary.line_number,
-                    'end_line': self._find_element_end_line(boundary, boundaries, i, lines)
-                })
-            
-            elif boundary.boundary_type == BoundaryType.FUNCTION:
-                if current_group:
-                    groups.append(current_group)
-                
-                current_group = [{
-                    'type': 'function',
-                    'name': boundary.name,
-                    'start_line': boundary.line_number,
-                    'end_line': self._find_element_end_line(boundary, boundaries, i, lines)
-                }]
-                current_class = None
-        
-        if current_group:
-            groups.append(current_group)
-        
-        return groups
     
     def _find_element_end_line(self, boundary: CodeBoundary, boundaries: List[CodeBoundary], 
                               current_idx: int, lines: List[str]) -> int:
@@ -314,29 +232,6 @@ class PythonChunker(BaseLanguageChunker):
                     return i - 1
         
         return len(lines) - 1
-    
-    def _split_large_group(self, element_group: List[Dict], lines: List[str], 
-                          file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Split a large element group into smaller chunks"""
-        chunks = []
-        
-        for element in element_group:
-            start_line = element['start_line']
-            end_line = element['end_line']
-            content = '\n'.join(lines[start_line:end_line + 1])
-            tokens = self.estimate_tokens(content)
-            
-            chunks.append(CodeChunk(
-                content=content,
-                file_metadata=file_metadata,
-                chunk_index=len(chunks),
-                chunk_type=element['type'],
-                start_line=start_line + 1,
-                end_line=end_line + 1,
-                tokens_count=tokens
-            ))
-        
-        return chunks
     
     def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Function-aware chunking with intelligent splitting within functions"""

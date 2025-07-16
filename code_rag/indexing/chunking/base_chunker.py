@@ -53,8 +53,6 @@ class ChunkingStrategy(Enum):
     """Different chunking strategies"""
     SEMANTIC_FIRST = "semantic_first"
     SIZE_FIRST = "size_first"
-    HIERARCHICAL = "hierarchical"
-    BALANCED = "balanced"
     FUNCTION_AWARE = "function_aware"
 
 
@@ -235,22 +233,11 @@ class BaseLanguageChunker(ABC):
         elif self.strategy == ChunkingStrategy.SEMANTIC_FIRST:
             return self.chunk_by_semantic_units(content, file_metadata)
         
-        elif self.strategy == ChunkingStrategy.HIERARCHICAL:
-            return self.chunk_by_hierarchy(content, file_metadata)
-        
         elif self.strategy == ChunkingStrategy.FUNCTION_AWARE:
             return self.chunk_function_aware(content, file_metadata)
         
-        else:  # BALANCED
-            return self.chunk_balanced(content, file_metadata)
-    
-    def chunk_by_hierarchy(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Create hierarchy-aware chunks (default implementation)"""
-        return self.chunk_by_semantic_units(content, file_metadata)
-    
-    def chunk_balanced(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
-        """Balance semantic and size considerations (default implementation)"""
-        return self.chunk_by_semantic_units(content, file_metadata)
+        else:
+            return self.chunk_by_semantic_units(content, file_metadata)
     
     def chunk_function_aware(self, content: str, file_metadata: FileMetadata) -> List[CodeChunk]:
         """Function-aware chunking with intelligent splitting (default implementation)"""
