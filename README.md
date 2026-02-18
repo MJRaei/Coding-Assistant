@@ -10,6 +10,10 @@ A flexible Retrieval-Augmented Generation (RAG) system designed for code analysi
 - **Multi-Language Support**: Handles Python, JavaScript, QML, and other programming languages
 - **Modular Architecture**: Easy to extend and customize
 
+## Workflow
+
+![Code RAG Workflow](docs/media/workflow.png)
+
 ## Quick Start
 
 ```python
